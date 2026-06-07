@@ -19,10 +19,10 @@ func fishFunc(name, val string) string {
 
 func pwshFunc(name, val string) string {
 	firstWord := strings.Fields(val)[0]
+	body := val
 	if firstWord == name {
-		body := strings.Replace(val, firstWord,
+		body = strings.Replace(val, firstWord,
 			fmt.Sprintf("& (Get-Command %s -Type Application)", firstWord), 1)
-		return fmt.Sprintf("function global:%s { %s @Args }", name, body)
 	}
-	return fmt.Sprintf("function global:%s { %s @Args }", name, val)
+	return fmt.Sprintf("Remove-Alias -Name %s -Force -ErrorAction SilentlyContinue\nfunction global:%s { %s @Args }", name, name, body)
 }

@@ -70,7 +70,7 @@ func TestFishFunc_selfRefBinary(t *testing.T) {
 
 func TestPwshFunc_selfReferencing(t *testing.T) {
 	got := pwshFunc("fzf", "fzf --height=50% --ansi")
-	want := "function global:fzf { & (Get-Command fzf -Type Application) --height=50% --ansi @Args }"
+	want := "Remove-Alias -Name fzf -Force -ErrorAction SilentlyContinue\nfunction global:fzf { & (Get-Command fzf -Type Application) --height=50% --ansi @Args }"
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
@@ -78,7 +78,15 @@ func TestPwshFunc_selfReferencing(t *testing.T) {
 
 func TestPwshFunc_normal(t *testing.T) {
 	got := pwshFunc("f", "fd . --hidden | fzf --preview=\"bat {}\"")
-	want := "function global:f { fd . --hidden | fzf --preview=\"bat {}\" @Args }"
+	want := "Remove-Alias -Name f -Force -ErrorAction SilentlyContinue\nfunction global:f { fd . --hidden | fzf --preview=\"bat {}\" @Args }"
+	if got != want {
+		t.Fatalf("expected %q, got %q", want, got)
+	}
+}
+
+func TestPwshFunc_dotdotAlias(t *testing.T) {
+	got := pwshFunc("..", "cd ..")
+	want := "Remove-Alias -Name .. -Force -ErrorAction SilentlyContinue\nfunction global:.. { cd .. @Args }"
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
@@ -86,7 +94,7 @@ func TestPwshFunc_normal(t *testing.T) {
 
 func TestPwshFunc_simple(t *testing.T) {
 	got := pwshFunc("cls", "clear")
-	want := "function global:cls { clear @Args }"
+	want := "Remove-Alias -Name cls -Force -ErrorAction SilentlyContinue\nfunction global:cls { clear @Args }"
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
