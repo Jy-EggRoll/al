@@ -130,10 +130,10 @@ func (c AliasConfig) Shells() []string {
 	return shells
 }
 
-// AddAlias adds or updates an alias. shells = ["all"] or empty for shared.
+// AddAlias adds or updates an alias. shells = ["common"] or empty for shared.
 func (c AliasConfig) AddAlias(name, command string, shells []string) (AliasConfig, error) {
 	existing, exists := c.Aliases[name]
-	isShared := len(shells) == 0 || (len(shells) == 1 && shells[0] == "all")
+	isShared := len(shells) == 0 || (len(shells) == 1 && shells[0] == "common")
 
 	// Aliases that don't exist yet — create fresh
 	if !exists {
@@ -222,9 +222,9 @@ func (c AliasConfig) Flatten() []AliasEntry {
 	for name, av := range c.Aliases {
 		switch {
 		case av.Inline != "":
-			entries = append(entries, AliasEntry{Name: name, Command: av.Inline, Shell: "all"})
+			entries = append(entries, AliasEntry{Name: name, Command: av.Inline, Shell: "common"})
 		case av.Multi != nil:
-			entries = append(entries, AliasEntry{Name: name, Command: strings.Join(av.Multi, " "), Shell: "all"})
+			entries = append(entries, AliasEntry{Name: name, Command: strings.Join(av.Multi, " "), Shell: "common"})
 		case av.Object != nil:
 			for shell, ov := range av.Object {
 				cmd := ""

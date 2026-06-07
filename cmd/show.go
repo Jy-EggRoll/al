@@ -27,11 +27,11 @@ var showCmd = &cobra.Command{
 		case av.Inline != "":
 			pterm.Println(pterm.Bold.Sprint("命令: ") + av.Inline)
 			pterm.Println(pterm.Bold.Sprint("类型: ") + "Inline (所有 Shell 共享)")
-			pterm.Println(pterm.Bold.Sprint("适用: ") + "all")
+			pterm.Println(pterm.Bold.Sprint("适用: ") + "通用")
 		case av.Multi != nil:
 			pterm.Println(pterm.Bold.Sprint("命令: ") + strings.Join(av.Multi, " "))
 			pterm.Println(pterm.Bold.Sprint("类型: ") + "Multi (数组，所有 Shell 共享)")
-			pterm.Println(pterm.Bold.Sprint("适用: ") + "all")
+			pterm.Println(pterm.Bold.Sprint("适用: ") + "通用")
 		case av.Object != nil:
 			pterm.Println(pterm.Bold.Sprint("类型: ") + "Object (按 Shell 区分)")
 			pterm.Println(pterm.Bold.Sprint("适用 Shell:"))

@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	flagAll       bool
+	flagCommon    bool
 	flagZsh       bool
 	flagBash      bool
 	flagFish      bool
@@ -36,7 +36,7 @@ Examples:
 
 		shells := resolveShells()
 		if len(shells) == 0 {
-			return fmt.Errorf("at least one shell flag required (or use --all)")
+			return fmt.Errorf("at least one shell flag required (or use --common)")
 		}
 
 		newCfg, err := cfg.AddAlias(name, command, shells)
@@ -55,8 +55,8 @@ Examples:
 }
 
 func resolveShells() []string {
-	if flagAll {
-		return []string{"all"}
+	if flagCommon {
+		return []string{"common"}
 	}
 	var shells []string
 	if flagZsh {
@@ -72,14 +72,14 @@ func resolveShells() []string {
 		shells = append(shells, "powershell")
 	}
 	if len(shells) == 0 {
-		return []string{"all"}
+		return []string{"common"}
 	}
 	return shells
 }
 
 func formatShells(shells []string) string {
-	if len(shells) == 1 && shells[0] == "all" {
-		return "all shells"
+	if len(shells) == 1 && shells[0] == "common" {
+		return "通用"
 	}
 	label := "shells: "
 	for i, s := range shells {
@@ -92,7 +92,7 @@ func formatShells(shells []string) string {
 }
 
 func init() {
-	addCmd.Flags().BoolVar(&flagAll, "all", false, "share across all shells (default)")
+	addCmd.Flags().BoolVar(&flagCommon, "common", false, "share across all shells")
 	addCmd.Flags().BoolVar(&flagZsh, "zsh", false, "zsh only")
 	addCmd.Flags().BoolVar(&flagBash, "bash", false, "bash only")
 	addCmd.Flags().BoolVar(&flagFish, "fish", false, "fish only")

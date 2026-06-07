@@ -103,7 +103,7 @@ func TestForShell_shellSpecific(t *testing.T) {
 
 func TestAddAlias_newShared(t *testing.T) {
 	cfg := Default()
-	cfg, err := cfg.AddAlias("g", "git", []string{"all"})
+	cfg, err := cfg.AddAlias("g", "git", []string{"common"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestAddAlias_overwriteConflict(t *testing.T) {
 			"zsh": {Inline: "rm -rf"},
 		},
 	}
-	_, err := cfg.AddAlias("rmrf", "rm -rf", []string{"all"})
+	_, err := cfg.AddAlias("rmrf", "rm -rf", []string{"common"})
 	if err == nil {
 		t.Fatal("expected conflict error")
 	}
@@ -168,7 +168,7 @@ func TestFlatten_shared(t *testing.T) {
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(entries))
 	}
-	if entries[0].Name != "g" || entries[0].Command != "git" || entries[0].Shell != "all" {
+	if entries[0].Name != "g" || entries[0].Command != "git" || entries[0].Shell != "common" {
 		t.Fatalf("unexpected entry: %+v", entries[0])
 	}
 }
