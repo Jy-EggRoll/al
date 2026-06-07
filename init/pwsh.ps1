@@ -1,6 +1,6 @@
 $env:ALIAS_SHELL = "powershell"
 
-function al {
+function global:al {
   if ($args[0] -in @('add', 'rm')) {
     & (Get-Command al -Type Application) @args
     if ($LASTEXITCODE -eq 0) {

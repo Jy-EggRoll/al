@@ -70,7 +70,7 @@ func TestFishFunc_selfRefBinary(t *testing.T) {
 
 func TestPwshFunc_selfReferencing(t *testing.T) {
 	got := pwshFunc("fzf", "fzf --height=50% --ansi")
-	want := "function fzf { & (Get-Command fzf -Type Application) --height=50% --ansi @Args }"
+	want := "function global:fzf { & (Get-Command fzf -Type Application) --height=50% --ansi @Args }"
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
@@ -78,7 +78,7 @@ func TestPwshFunc_selfReferencing(t *testing.T) {
 
 func TestPwshFunc_normal(t *testing.T) {
 	got := pwshFunc("f", "fd . --hidden | fzf --preview=\"bat {}\"")
-	want := "function f { fd . --hidden | fzf --preview=\"bat {}\" @Args }"
+	want := "function global:f { fd . --hidden | fzf --preview=\"bat {}\" @Args }"
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
@@ -86,7 +86,7 @@ func TestPwshFunc_normal(t *testing.T) {
 
 func TestPwshFunc_simple(t *testing.T) {
 	got := pwshFunc("cls", "clear")
-	want := "function cls { clear @Args }"
+	want := "function global:cls { clear @Args }"
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}

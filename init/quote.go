@@ -22,7 +22,7 @@ func pwshFunc(name, val string) string {
 	if firstWord == name {
 		body := strings.Replace(val, firstWord,
 			fmt.Sprintf("& (Get-Command %s -Type Application)", firstWord), 1)
-		return fmt.Sprintf("function %s { %s @Args }", name, body)
+		return fmt.Sprintf("function global:%s { %s @Args }", name, body)
 	}
-	return fmt.Sprintf("function %s { %s @Args }", name, val)
+	return fmt.Sprintf("function global:%s { %s @Args }", name, val)
 }
