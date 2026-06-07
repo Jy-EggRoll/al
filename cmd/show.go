@@ -47,7 +47,7 @@ var showCmd = &cobra.Command{
 			}
 		}
 
-		pterm.Println(pterm.Bold.Sprint("来源: ") + "~/.config/alias.toml")
+		pterm.Println(pterm.Bold.Sprint("来源: ") + "~/.config/al/alias.toml")
 		return nil
 	},
 }

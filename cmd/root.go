@@ -10,13 +10,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cfg config.AliasConfig
-var ConfigPath string
+var (
+	cfg       config.AliasConfig
+	ConfigPath string
+	Version   string
+	BuildTime string
+)
 
 var rootCmd = &cobra.Command{
-	Use:   "als",
+	Use:   "al",
 	Short: "Cross-shell alias manager",
-	Long: `als reads aliases from ~/.config/alias.toml and exports them
+	Long: `al reads aliases from ~/.config/al/alias.toml and exports them
 for the target shell.
 
 Supported shells: bash, zsh, fish, powershell`,
@@ -29,7 +33,11 @@ Supported shells: bash, zsh, fish, powershell`,
 		if err != nil {
 			return err
 		}
-		ConfigPath = filepath.Join(home, ".config", "alias.toml")
+		ConfigPath = filepath.Join(home, ".config", "al", "alias.toml")
+
+		if err := os.MkdirAll(filepath.Dir(ConfigPath), 0755); err != nil {
+			return fmt.Errorf("create config dir: %w", err)
+		}
 
 		data, err := os.ReadFile(ConfigPath)
 		if err != nil {

@@ -14,10 +14,10 @@ var initCmd = &cobra.Command{
 Supported shells: bash, zsh, fish, powershell
 
 Usage:
-  eval "$(als init zsh)"     # zsh
-  eval "$(als init bash)"    # bash
-  als init fish | source     # fish
-  Invoke-Expression (&als init powershell | Out-String)  # PowerShell
+  eval "$(al init zsh)"     # zsh
+  eval "$(al init bash)"    # bash
+  al init fish | source     # fish
+  Invoke-Expression (&al init powershell | Out-String)  # PowerShell
 `,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

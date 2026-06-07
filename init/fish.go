@@ -14,7 +14,7 @@ func fish(cfg config.AliasConfig) {
 	fmt.Println(fishPreamble)
 	for name, av := range cfg.Aliases {
 		if val, ok := av.ForShell("fish"); ok {
-			fmt.Printf("alias %s=\"%s\"\n", name, val)
+			fmt.Println(fishFunc(name, val))
 		}
 	}
 }

@@ -14,7 +14,7 @@ func zsh(cfg config.AliasConfig) {
 	fmt.Println(zshPreamble)
 	for name, av := range cfg.Aliases {
 		if val, ok := av.ForShell("zsh"); ok {
-			fmt.Printf("alias %s=\"%s\"\n", name, val)
+			fmt.Printf("alias %s=%s\n", name, posixQuote(val))
 		}
 	}
 }

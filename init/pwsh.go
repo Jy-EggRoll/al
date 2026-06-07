@@ -14,7 +14,7 @@ func pwsh(cfg config.AliasConfig) {
 	fmt.Println(pwshPreamble)
 	for name, av := range cfg.Aliases {
 		if val, ok := av.ForShell("powershell"); ok {
-			fmt.Printf("function %s { %s @Args }\n", name, val)
+			fmt.Println(pwshFunc(name, val))
 		}
 	}
 }

@@ -154,10 +154,10 @@ func (c AliasConfig) AddAlias(name, command string, shells []string) (AliasConfi
 		return c, fmt.Errorf("alias %q is a multi-type, cannot overwrite", name)
 	}
 	if isShared && existing.Object != nil {
-		return c, fmt.Errorf("alias %q already has shell-specific values — run 'als rm %s' first", name, name)
+		return c, fmt.Errorf("alias %q already has shell-specific values — run 'al rm %s' first", name, name)
 	}
 	if !isShared && existing.Inline != "" {
-		return c, fmt.Errorf("alias %q is shared across all shells — run 'als rm %s' first", name, name)
+		return c, fmt.Errorf("alias %q is shared across all shells — run 'al rm %s' first", name, name)
 	}
 
 	// Safe overwrite
@@ -169,6 +169,15 @@ func (c AliasConfig) AddAlias(name, command string, shells []string) (AliasConfi
 		}
 		c.Aliases[name] = existing
 	}
+	return c, nil
+}
+
+// RemoveAlias deletes an alias by name.
+func (c AliasConfig) RemoveAlias(name string) (AliasConfig, error) {
+	if _, ok := c.Aliases[name]; !ok {
+		return c, fmt.Errorf("alias %q not found", name)
+	}
+	delete(c.Aliases, name)
 	return c, nil
 }
 

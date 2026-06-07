@@ -9,7 +9,7 @@ import (
 
 func Run(cfg config.AliasConfig, args ...string) {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "Usage: als init <shell>")
+		fmt.Fprintln(os.Stderr, "Usage: al init <shell>")
 		os.Exit(1)
 	}
 

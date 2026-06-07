@@ -21,13 +21,13 @@ var addCmd = &cobra.Command{
 	Short: "Add or update an alias",
 	Long: `Add a new alias or update an existing one.
 
-The command is stored in ~/.config/alias.toml.
+The command is stored in ~/.config/al/alias.toml.
 
 Examples:
-  als add gs "git status"              # shared across all shells
-  als add rmrf "rm -rf" --zsh          # zsh only
-  als add rmrf "Remove-Item -Recurse -Force" --powershell  # PowerShell only
-  als add o "open ." --zsh --bash      # zsh and bash only
+  al add gs "git status"              # shared across all shells
+  al add rmrf "rm -rf" --zsh          # zsh only
+  al add rmrf "Remove-Item -Recurse -Force" --powershell  # PowerShell only
+  al add o "open ." --zsh --bash      # zsh and bash only
 `,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
