@@ -172,6 +172,73 @@ func (c AliasConfig) AddAlias(name, command string, shells []string) (AliasConfi
 	return c, nil
 }
 
+// EditAlias modifies an existing alias's command and/or shell scope.
+// command = nil → keep existing; shells = nil → keep existing scope.
+func (c AliasConfig) EditAlias(name string, command *string, shells []string) (AliasConfig, error) {
+	existing, ok := c.Aliases[name]
+	if !ok {
+		return c, fmt.Errorf("alias %q not found", name)
+	}
+
+	if command == nil && shells == nil {
+		return c, fmt.Errorf("nothing to change for alias %q", name)
+	}
+
+	// Resolve effective command
+	cmd := ""
+	if command != nil {
+		cmd = *command
+	} else {
+		switch {
+		case existing.Inline != "":
+			cmd = existing.Inline
+		case existing.Multi != nil:
+			cmd = strings.Join(existing.Multi, " ")
+		case existing.Object != nil:
+			for _, ov := range existing.Object {
+				switch {
+				case ov.Inline != "":
+					cmd = ov.Inline
+				case ov.Multi != nil:
+					cmd = strings.Join(ov.Multi, " ")
+				}
+				if cmd != "" {
+					break
+				}
+			}
+		}
+	}
+
+	// Apply changes
+	if shells != nil {
+		isShared := len(shells) == 1 && shells[0] == "common"
+		if isShared {
+			c.Aliases[name] = AliasValue{Inline: cmd}
+		} else {
+			obj := make(map[string]AliasObjectValue, len(shells))
+			for _, s := range shells {
+				obj[s] = AliasObjectValue{Inline: cmd}
+			}
+			c.Aliases[name] = AliasValue{Object: obj}
+		}
+	} else {
+		switch {
+		case existing.Multi != nil:
+			return c, fmt.Errorf("alias %q is a multi-type, edit the TOML file directly", name)
+		case existing.Inline != "":
+			c.Aliases[name] = AliasValue{Inline: cmd}
+		case existing.Object != nil:
+			obj := make(map[string]AliasObjectValue, len(existing.Object))
+			for shell := range existing.Object {
+				obj[shell] = AliasObjectValue{Inline: cmd}
+			}
+			c.Aliases[name] = AliasValue{Object: obj}
+		}
+	}
+
+	return c, nil
+}
+
 // RemoveAlias deletes an alias by name.
 func (c AliasConfig) RemoveAlias(name string) (AliasConfig, error) {
 	if _, ok := c.Aliases[name]; !ok {

@@ -65,6 +65,27 @@ al add c 'cd "$(fd . ~ --type directory --hidden --no-ignore --color always | fz
 
 这个命令在 bash 或 zsh 里也用不上——语法不兼容。但没关系，打上 `--fish`，它只管 fish。
 
+但你也有踩坑的时候。某天你加了这么一条：
+
+```bash
+al add cdf 'cd "$(fd . ~ --type directory --hidden --no-ignore --color always | fzf)"'
+```
+
+忘记加 `--fish`，它成了通用别名。在 fish 上好好的，切到 zsh 一敲 `cdf` 就报错——命令解析器不认识。要修正就得：
+
+```bash
+al rm cdf
+al add cdf '...' --fish  # 又得把那串长参数打一遍
+```
+
+太麻烦。所以你用 `al edit`：
+
+```bash
+al edit cdf --fish
+```
+
+不改命令，只把归属从 common 切到 fish。一步到位。再也不用删了重加了。
+
 `--common` 的别名（`gs`、`gtcl`、`f`、`fzf`……）全局通行，shell 特定的别名各归各位。`al ls` 不加 flag 时只看"通用 + 当前环境"，不啰嗦。想看全部就 `--all`。
 
 ### 打理

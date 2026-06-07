@@ -215,6 +215,128 @@ func TestDefault(t *testing.T) {
 	}
 }
 
+func TestEditAlias_notFound(t *testing.T) {
+	cfg := Default()
+	_, err := cfg.EditAlias("nonexistent", nil, nil)
+	if err == nil {
+		t.Fatal("expected error for nonexistent alias")
+	}
+}
+
+func TestEditAlias_noChanges(t *testing.T) {
+	cfg := Default()
+	cfg.Aliases["g"] = AliasValue{Inline: "git"}
+	_, err := cfg.EditAlias("g", nil, nil)
+	if err == nil {
+		t.Fatal("expected error for no changes")
+	}
+}
+
+func TestEditAlias_changeCommand_shared(t *testing.T) {
+	cfg := Default()
+	cfg.Aliases["g"] = AliasValue{Inline: "git"}
+	cmd := "gh"
+	cfg, err := cfg.EditAlias("g", &cmd, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	av := cfg.Aliases["g"]
+	if av.Inline != "gh" {
+		t.Fatalf("expected 'gh', got %q", av.Inline)
+	}
+}
+
+func TestEditAlias_changeShells_sharedToShellSpecific(t *testing.T) {
+	cfg := Default()
+	cfg.Aliases["g"] = AliasValue{Inline: "git"}
+	cfg, err := cfg.EditAlias("g", nil, []string{"fish"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	av := cfg.Aliases["g"]
+	if av.Inline != "" {
+		t.Fatal("expected Inline to be cleared")
+	}
+	if av.Object == nil {
+		t.Fatal("expected Object type")
+	}
+	if av.Object["fish"].Inline != "git" {
+		t.Fatalf("expected 'git' for fish, got %q", av.Object["fish"].Inline)
+	}
+}
+
+func TestEditAlias_changeBoth_sharedToShellSpecific(t *testing.T) {
+	cfg := Default()
+	cfg.Aliases["g"] = AliasValue{Inline: "git"}
+	cmd := "gh"
+	cfg, err := cfg.EditAlias("g", &cmd, []string{"zsh", "bash"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	av := cfg.Aliases["g"]
+	if av.Inline != "" {
+		t.Fatal("expected Inline to be cleared")
+	}
+	if av.Object["zsh"].Inline != "gh" {
+		t.Fatalf("expected 'gh' for zsh, got %q", av.Object["zsh"].Inline)
+	}
+	if av.Object["bash"].Inline != "gh" {
+		t.Fatalf("expected 'gh' for bash, got %q", av.Object["bash"].Inline)
+	}
+}
+
+func TestEditAlias_changeShells_shellSpecificToShared(t *testing.T) {
+	cfg := Default()
+	cfg.Aliases["rmrf"] = AliasValue{
+		Object: map[string]AliasObjectValue{
+			"zsh": {Inline: "rm -rf"},
+		},
+	}
+	cfg, err := cfg.EditAlias("rmrf", nil, []string{"common"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	av := cfg.Aliases["rmrf"]
+	if av.Inline != "rm -rf" {
+		t.Fatalf("expected 'rm -rf', got %q", av.Inline)
+	}
+	if av.Object != nil {
+		t.Fatal("expected Object to be cleared")
+	}
+}
+
+func TestEditAlias_changeCommand_shellSpecific(t *testing.T) {
+	cfg := Default()
+	cfg.Aliases["rmrf"] = AliasValue{
+		Object: map[string]AliasObjectValue{
+			"zsh": {Inline: "rm -rf"},
+			"fish": {Inline: "rm -rf"},
+		},
+	}
+	cmd := "trash"
+	cfg, err := cfg.EditAlias("rmrf", &cmd, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	av := cfg.Aliases["rmrf"]
+	if av.Object["zsh"].Inline != "trash" {
+		t.Fatalf("expected 'trash' for zsh, got %q", av.Object["zsh"].Inline)
+	}
+	if av.Object["fish"].Inline != "trash" {
+		t.Fatalf("expected 'trash' for fish, got %q", av.Object["fish"].Inline)
+	}
+}
+
+func TestEditAlias_multiTypeError(t *testing.T) {
+	cfg := Default()
+	cfg.Aliases["m"] = AliasValue{Multi: []string{"echo", "hello"}}
+	cmd := "say hi"
+	_, err := cfg.EditAlias("m", &cmd, nil)
+	if err == nil {
+		t.Fatal("expected error for multi-type alias")
+	}
+}
+
 func TestShells(t *testing.T) {
 	cfg := Default()
 	cfg.Aliases["a"] = AliasValue{

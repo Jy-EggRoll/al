@@ -35,6 +35,10 @@ tasks:
       - go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}{{exeExt}} .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -47,6 +51,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-windows-386.exe .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -59,6 +67,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-windows-amd64.exe .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -71,6 +83,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-windows-arm64.exe .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -83,6 +99,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-linux-386 .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -95,6 +115,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-linux-amd64 .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -107,6 +131,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-linux-arm .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -119,6 +147,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-linux-arm64 .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -131,6 +163,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-darwin-amd64 .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -143,6 +179,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-darwin-arm64 .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -155,6 +195,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-freebsd-amd64 .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
@@ -167,6 +211,10 @@ tasks:
       - CGO_ENABLED=0 GOOS=freebsd GOARCH=arm64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-freebsd-arm64 .
     sources:
       - ./**/*.go
+      - ./init/*.zsh
+      - ./init/*.bash
+      - ./init/*.fish
+      - ./init/*.ps1
       - go.mod
       - go.sum
     generates:
