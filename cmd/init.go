@@ -19,7 +19,7 @@ Usage:
   al init fish | source     # fish
   Invoke-Expression (&al init powershell | Out-String)  # PowerShell
 `,
-	Args: cobra.ExactArgs(1),
+	Args: exactArgsCmd(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		initpkg.Run(cfg, args[0])
 		return nil

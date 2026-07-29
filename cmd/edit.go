@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/jy-eggroll/al/internal/i18n"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
@@ -20,7 +19,7 @@ Examples:
   al edit cdf --common                          # shared across all shells
   al edit cdf 'cd ~'                            # change command, keep current shells
 `,
-	Args: cobra.RangeArgs(1, 2),
+	Args: rangeArgsCmd(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
@@ -32,11 +31,11 @@ Examples:
 		hasShellFlag := flagEditCommon || flagEditZsh || flagEditBash || flagEditFish || flagEditPowershell
 
 		if command == nil && !hasShellFlag {
-			return fmt.Errorf("specify a new command or shell flags (nothing to change)")
+			return i18n.Errorf("ERR_EditNothing")
 		}
 
 		if flagEditCommon && (flagEditZsh || flagEditBash || flagEditFish || flagEditPowershell) {
-			return fmt.Errorf("--common cannot be combined with shell-specific flags")
+			return i18n.Errorf("ERR_EditCommonConflict")
 		}
 
 		var shells []string
@@ -66,10 +65,10 @@ Examples:
 		cfg = newCfg
 
 		if err := cfg.Save(ConfigPath); err != nil {
-			return fmt.Errorf("save config: %w", err)
+			return i18n.Errorf("ERR_SaveConfig", err)
 		}
 
-		pterm.Success.Printfln("Alias %s updated", name)
+		pterm.Success.Printfln(i18n.T("CLI_AliasUpdated"), name)
 		return nil
 	},
 }

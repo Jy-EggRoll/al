@@ -1,0 +1,151 @@
+# 基准语言 = 英文（English base catalog）。
+# 所有其他语言（如 active.zh.toml）必须包含与此文件完全相同的 key 集合。
+# 命名规范：{领域前缀}_{描述}，前缀含义见 GOLANG_CLI_I18N_GUIDE.md 第 5 节。
+# 格式化占位符（%s/%d/%q/%w）在各语言中必须保持一致的数量与类型。
+
+# ===== 根命令描述 =====
+CMD_al_Short = "Cross-shell alias manager"
+CMD_al_Long = """
+al reads aliases from ~/.config/al/alias.toml and exports them
+for the target shell.
+
+Supported shells: bash, zsh, fish, powershell
+"""
+
+# ===== 各子命令描述（Short / Long）=====
+CMD_add_Short = "Add or update an alias"
+CMD_add_Long = """
+Add a new alias or update an existing one.
+
+The command is stored in ~/.config/al/alias.toml.
+
+Examples:
+  al add gs "git status"              # shared across all shells
+  al add rmrf "rm -rf" --zsh          # zsh only
+  al add rmrf "Remove-Item -Recurse -Force" --powershell  # PowerShell only
+  al add o "open ." --zsh --bash      # zsh and bash only
+"""
+
+CMD_edit_Short = "Modify an existing alias"
+CMD_edit_Long = """
+Modify an existing alias's command and/or shell scope.
+
+Shell flags set the new scope (not additive). Omit them to keep the current scope.
+
+Examples:
+  al edit cdf 'cd ~' --fish                    # fish only, new command
+  al edit cdf --fish                            # fish only, keep command
+  al edit cdf --common                          # shared across all shells
+  al edit cdf 'cd ~'                            # change command, keep current shells
+"""
+
+CMD_init_Short = "Generate alias declarations for a shell"
+CMD_init_Long = """
+Output alias declarations for the given shell.
+
+Supported shells: bash, zsh, fish, powershell
+
+Usage:
+  eval "$(al init zsh)"     # zsh
+  eval "$(al init bash)"    # bash
+  al init fish | source     # fish
+  Invoke-Expression (&al init powershell | Out-String)  # PowerShell
+"""
+
+CMD_ls_Short = "List all aliases"
+CMD_ls_Long = """
+List all aliases with their commands and applicable shells.
+
+Optional filter argument filters by alias name or command value.
+"""
+
+CMD_rm_Short = "Remove an alias"
+CMD_rm_Long = "Remove an alias from the configuration file."
+
+CMD_show_Short = "Show details of a specific alias"
+CMD_show_Long = "Display detailed information about a single alias definition."
+
+CMD_version_Short = "Show version information"
+
+# ===== Flag 说明（键名 = Flag_<命令名>_<flag名>）=====
+Flag_al_lang = "Language override (e.g., en, zh)"
+Flag_add_common = "share across all shells"
+Flag_add_zsh = "zsh only"
+Flag_add_bash = "bash only"
+Flag_add_fish = "fish only"
+Flag_add_powershell = "powershell only"
+Flag_add_force = "overwrite without confirmation"
+Flag_edit_common = "share across all shells"
+Flag_edit_zsh = "zsh only"
+Flag_edit_bash = "bash only"
+Flag_edit_fish = "fish only"
+Flag_edit_powershell = "powershell only"
+Flag_ls_all = "show all shells"
+Flag_ls_zsh = "show zsh aliases"
+Flag_ls_bash = "show bash aliases"
+Flag_ls_fish = "show fish aliases"
+Flag_ls_powershell = "show powershell aliases"
+
+# ===== CLI 输出（成功/提示/计数/版本）=====
+CLI_AliasAdded = "Alias %s → %s (%s)"
+CLI_AliasUpdated = "Alias %s updated"
+CLI_AliasRemoved = "Alias %s removed"
+CLI_NoAliasesMatched = "No aliases matched"
+CLI_AliasCount = "%d aliases"
+CLI_Version = "al version %s (built at %s)"
+
+# ===== 错误信息（ERR_ 前缀，含 %w/%q/%d 占位符）=====
+ERR_ParseConfigFile = "Failed to parse config file: %v"
+ERR_CreateConfigDir = "create config dir: %w"
+ERR_AddAtLeastOneShell = "at least one shell flag required (or use --common)"
+ERR_SaveConfig = "save config: %w"
+ERR_EditNothing = "specify a new command or shell flags (nothing to change)"
+ERR_EditCommonConflict = "--common cannot be combined with shell-specific flags"
+ERR_AliasNotFound = "alias %q not found"
+ERR_TomlParse = "toml parse error: %w"
+ERR_AliasParse = "alias %q: %w"
+ERR_ArrayElementNotString = "array element %d is not a string"
+ERR_ArrayElementNotStringKey = "array element %d for %q is not a string"
+ERR_UnsupportedTypeKey = "unsupported value type for key %q"
+ERR_UnsupportedType = "unsupported value type"
+ERR_MultiCannotOverwrite = "alias %q is a multi-type, cannot overwrite"
+ERR_HasShellValues = "alias %q already has shell-specific values — run 'al rm %s' first"
+ERR_SharedRunRm = "alias %q is shared across all shells — run 'al rm %s' first"
+ERR_NothingToChange = "nothing to change for alias %q"
+ERR_MultiEditDirectly = "alias %q is a multi-type, edit the TOML file directly"
+ERR_ConfigCreateFile = "create config: %w"
+ERR_EncodeToml = "encode toml: %w"
+ERR_ArgsExact = "requires exactly %d argument(s), received %d"
+ERR_ArgsMin = "requires at least %d argument(s), received %d"
+ERR_ArgsMax = "accepts at most %d argument(s), received %d"
+ERR_ArgsRange = "requires between %d and %d argument(s), received %d"
+
+# ===== show 命令的明细标签 =====
+Show_AliasLabel = "Alias: "
+Show_CommandLabel = "Command: "
+Show_TypeLabel = "Type: "
+Show_TypeInline = "Inline (shared across all shells)"
+Show_TypeMulti = "Multi (array, shared across all shells)"
+Show_ScopeCommon = "all shells"
+Show_TypeObject = "Object (per-shell)"
+Show_ApplicableLabel = "Applies to: "
+Show_ApplicableShellsLabel = "Applicable shells:"
+Show_SourceLabel = "Source: "
+Show_ScopeShellsPrefix = "shells: "
+
+# ===== ls 命令表格表头 =====
+LS_HeaderAlias = "Alias"
+LS_HeaderCommand = "Command"
+LS_HeaderShell = "Shell"
+
+# ===== init 子命令的错误提示 =====
+Init_Usage = "Usage: al init <shell>"
+Init_UnsupportedShell = "Unsupported shell: %s"
+
+# ===== 帮助文本各分节标题（供 SetHelpFunc 本地化）=====
+Help_Usage = "Usage:"
+Help_Examples = "Examples:"
+Help_AvailableCommands = "Available Commands:"
+Help_Flags = "Flags:"
+Help_GlobalFlags = "Global Flags:"
+Help_MoreInfo = "Use \"%s [command] --help\" for more information about a command."

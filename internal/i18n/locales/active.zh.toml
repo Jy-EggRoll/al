@@ -1,0 +1,148 @@
+# 简体中文翻译（Chinese / Simplified）。key 集合必须与 active.en.toml 完全一致。
+# 占位符数量与类型（%s/%d/%q/%w）与英文版保持一致。
+
+# ===== 根命令描述 =====
+CMD_al_Short = "跨 Shell 别名管理器"
+CMD_al_Long = """
+al 从 ~/.config/al/alias.toml 读取别名，并为目标 shell 导出。
+
+支持的 shell：bash、zsh、fish、powershell
+"""
+
+# ===== 各子命令描述（Short / Long）=====
+CMD_add_Short = "新增或更新一个别名"
+CMD_add_Long = """
+新增别名，或更新已有的别名。
+
+命令会保存在 ~/.config/al/alias.toml。
+
+示例：
+  al add gs "git status"              # 所有 shell 共享
+  al add rmrf "rm -rf" --zsh          # 仅 zsh
+  al add rmrf "Remove-Item -Recurse -Force" --powershell  # 仅 PowerShell
+  al add o "open ." --zsh --bash      # 仅 zsh 与 bash
+"""
+
+CMD_edit_Short = "修改已有的别名"
+CMD_edit_Long = """
+修改已有别名的命令和/或所属 shell 范围。
+
+shell 参数设置新的范围（非叠加）。省略它们则保持当前范围。
+
+示例：
+  al edit cdf 'cd ~' --fish                    # 仅 fish，新命令
+  al edit cdf --fish                            # 仅 fish，保持命令
+  al edit cdf --common                          # 所有 shell 共享
+  al edit cdf 'cd ~'                            # 改命令，保持当前 shell
+"""
+
+CMD_init_Short = "为指定 shell 生成别名声明"
+CMD_init_Long = """
+为给定 shell 输出别名声明。
+
+支持的 shell：bash、zsh、fish、powershell
+
+用法：
+  eval "$(al init zsh)"     # zsh
+  eval "$(al init bash)"    # bash
+  al init fish | source     # fish
+  Invoke-Expression (&al init powershell | Out-String)  # PowerShell
+"""
+
+CMD_ls_Short = "列出所有别名"
+CMD_ls_Long = """
+列出所有别名及其命令与适用的 shell。
+
+可选的过滤参数按别名名或命令内容过滤。
+"""
+
+CMD_rm_Short = "删除一个别名"
+CMD_rm_Long = "从配置文件中删除一个别名。"
+
+CMD_show_Short = "查看某个别名的详细信息"
+CMD_show_Long = "展示单个别名定义的详细信息。"
+
+CMD_version_Short = "显示版本信息"
+
+# ===== Flag 说明 =====
+Flag_al_lang = "语言覆盖（如 en、zh）"
+Flag_add_common = "所有 shell 共享"
+Flag_add_zsh = "仅 zsh"
+Flag_add_bash = "仅 bash"
+Flag_add_fish = "仅 fish"
+Flag_add_powershell = "仅 powershell"
+Flag_add_force = "无需确认直接覆盖"
+Flag_edit_common = "所有 shell 共享"
+Flag_edit_zsh = "仅 zsh"
+Flag_edit_bash = "仅 bash"
+Flag_edit_fish = "仅 fish"
+Flag_edit_powershell = "仅 powershell"
+Flag_ls_all = "显示所有 shell"
+Flag_ls_zsh = "显示 zsh 别名"
+Flag_ls_bash = "显示 bash 别名"
+Flag_ls_fish = "显示 fish 别名"
+Flag_ls_powershell = "显示 powershell 别名"
+
+# ===== CLI 输出 =====
+CLI_AliasAdded = "别名 %s → %s（%s）"
+CLI_AliasUpdated = "别名 %s 已更新"
+CLI_AliasRemoved = "别名 %s 已删除"
+CLI_NoAliasesMatched = "没有匹配的别名"
+CLI_AliasCount = "%d 个别名"
+CLI_Version = "al 版本 %s（构建于 %s）"
+
+# ===== 错误信息 =====
+ERR_ParseConfigFile = "解析配置文件失败：%v"
+ERR_CreateConfigDir = "创建配置目录失败：%w"
+ERR_AddAtLeastOneShell = "至少需要指定一个 shell 参数（或使用 --common）"
+ERR_SaveConfig = "保存配置失败：%w"
+ERR_EditNothing = "请指定新命令或 shell 参数（没有任何改动）"
+ERR_EditCommonConflict = "--common 不能与特定 shell 参数同时使用"
+ERR_AliasNotFound = "别名 %q 不存在"
+ERR_TomlParse = "TOML 解析错误：%w"
+ERR_AliasParse = "别名 %q：%w"
+ERR_ArrayElementNotString = "数组第 %d 个元素不是字符串"
+ERR_ArrayElementNotStringKey = "数组第 %d 个元素（键 %q）不是字符串"
+ERR_UnsupportedTypeKey = "键 %q 的值类型不支持"
+ERR_UnsupportedType = "不支持的值类型"
+ERR_MultiCannotOverwrite = "别名 %q 是 multi 类型，无法覆盖"
+ERR_HasShellValues = "别名 %q 已存在特定 shell 的值 — 请先执行 'al rm %s'"
+ERR_SharedRunRm = "别名 %q 在所有 shell 间共享 — 请先执行 'al rm %s'"
+ERR_NothingToChange = "别名 %q 没有任何需要修改的内容"
+ERR_MultiEditDirectly = "别名 %q 是 multi 类型，请直接编辑 TOML 文件"
+ERR_ConfigCreateFile = "创建配置文件失败：%w"
+ERR_EncodeToml = "编码 TOML 失败：%w"
+ERR_ArgsExact = "需要恰好 %d 个参数，实际收到 %d 个"
+ERR_ArgsMin = "至少需要 %d 个参数，实际收到 %d 个"
+ERR_ArgsMax = "最多接受 %d 个参数，实际收到 %d 个"
+ERR_ArgsRange = "需要 %d 到 %d 个参数，实际收到 %d 个"
+
+# ===== show 命令的明细标签 =====
+Show_AliasLabel = "别名: "
+Show_CommandLabel = "命令: "
+Show_TypeLabel = "类型: "
+Show_TypeInline = "Inline（所有 Shell 共享）"
+Show_TypeMulti = "Multi（数组，所有 Shell 共享）"
+Show_ScopeCommon = "通用"
+Show_TypeObject = "Object（按 Shell 区分）"
+Show_ApplicableLabel = "适用: "
+Show_ApplicableShellsLabel = "适用 Shell:"
+Show_SourceLabel = "来源: "
+Show_ScopeShellsPrefix = "Shell: "
+
+# ===== ls 命令表格表头 =====
+LS_HeaderAlias = "别名"
+LS_HeaderCommand = "命令"
+LS_HeaderShell = "Shell"
+
+# ===== init 子命令的错误提示 =====
+Init_Usage = "用法：al init <shell>"
+Init_UnsupportedShell = "不支持的 shell：%s"
+
+# ===== 帮助文本各分节标题 =====
+Help_Usage = "用法："
+Help_Examples = "示例："
+Help_AvailableCommands = "可用命令："
+Help_Flags = "参数："
+Help_GlobalFlags = "全局参数："
+Help_MoreInfo = "使用 \"%s [command] --help\" 查看该命令的更多信息。"

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jy-eggroll/al/internal/i18n"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
@@ -12,29 +13,29 @@ var showCmd = &cobra.Command{
 	Use:   "show <alias-name>",
 	Short: "Show details of a specific alias",
 	Long:  `Display detailed information about a single alias definition.`,
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgsCmd(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
 		av, ok := cfg.Aliases[name]
 		if !ok {
-			return fmt.Errorf("alias %q not found", name)
+			return i18n.Errorf("ERR_AliasNotFound", name)
 		}
 
-		pterm.Println(pterm.Bold.Sprint("别名: ") + name)
+		pterm.Println(pterm.Bold.Sprint(i18n.T("Show_AliasLabel")) + name)
 
 		switch {
 		case av.Inline != "":
-			pterm.Println(pterm.Bold.Sprint("命令: ") + av.Inline)
-			pterm.Println(pterm.Bold.Sprint("类型: ") + "Inline (所有 Shell 共享)")
-			pterm.Println(pterm.Bold.Sprint("适用: ") + "通用")
+			pterm.Println(pterm.Bold.Sprint(i18n.T("Show_CommandLabel")) + av.Inline)
+			pterm.Println(pterm.Bold.Sprint(i18n.T("Show_TypeLabel")) + i18n.T("Show_TypeInline"))
+			pterm.Println(pterm.Bold.Sprint(i18n.T("Show_ApplicableLabel")) + i18n.T("Show_ScopeCommon"))
 		case av.Multi != nil:
-			pterm.Println(pterm.Bold.Sprint("命令: ") + strings.Join(av.Multi, " "))
-			pterm.Println(pterm.Bold.Sprint("类型: ") + "Multi (数组，所有 Shell 共享)")
-			pterm.Println(pterm.Bold.Sprint("适用: ") + "通用")
+			pterm.Println(pterm.Bold.Sprint(i18n.T("Show_CommandLabel")) + strings.Join(av.Multi, " "))
+			pterm.Println(pterm.Bold.Sprint(i18n.T("Show_TypeLabel")) + i18n.T("Show_TypeMulti"))
+			pterm.Println(pterm.Bold.Sprint(i18n.T("Show_ApplicableLabel")) + i18n.T("Show_ScopeCommon"))
 		case av.Object != nil:
-			pterm.Println(pterm.Bold.Sprint("类型: ") + "Object (按 Shell 区分)")
-			pterm.Println(pterm.Bold.Sprint("适用 Shell:"))
+			pterm.Println(pterm.Bold.Sprint(i18n.T("Show_TypeLabel")) + i18n.T("Show_TypeObject"))
+			pterm.Println(pterm.Bold.Sprint(i18n.T("Show_ApplicableShellsLabel")))
 			for shell, ov := range av.Object {
 				cmd := ""
 				switch {
@@ -47,7 +48,7 @@ var showCmd = &cobra.Command{
 			}
 		}
 
-		pterm.Println(pterm.Bold.Sprint("来源: ") + "~/.config/al/alias.toml")
+		pterm.Println(pterm.Bold.Sprint(i18n.T("Show_SourceLabel")) + "~/.config/al/alias.toml")
 		return nil
 	},
 }

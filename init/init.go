@@ -5,11 +5,12 @@ import (
 	"os"
 
 	"github.com/jy-eggroll/al/config"
+	"github.com/jy-eggroll/al/internal/i18n"
 )
 
 func Run(cfg config.AliasConfig, args ...string) {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "Usage: al init <shell>")
+		fmt.Fprintln(os.Stderr, i18n.T("Init_Usage"))
 		os.Exit(1)
 	}
 
@@ -24,7 +25,7 @@ func Run(cfg config.AliasConfig, args ...string) {
 	case "powershell":
 		pwsh(cfg)
 	default:
-		fmt.Fprintf(os.Stderr, "Unsupported shell: %s\n", shell)
+		fmt.Fprintf(os.Stderr, i18n.T("Init_UnsupportedShell")+"\n", shell)
 		os.Exit(1)
 	}
 }

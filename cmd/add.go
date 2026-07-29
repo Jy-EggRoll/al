@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/jy-eggroll/al/internal/i18n"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
@@ -29,14 +28,14 @@ Examples:
   al add rmrf "Remove-Item -Recurse -Force" --powershell  # PowerShell only
   al add o "open ." --zsh --bash      # zsh and bash only
 `,
-	Args: cobra.ExactArgs(2),
+	Args: exactArgsCmd(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		command := args[1]
 
 		shells := resolveShells()
 		if len(shells) == 0 {
-			return fmt.Errorf("at least one shell flag required (or use --common)")
+			return i18n.Errorf("ERR_AddAtLeastOneShell")
 		}
 
 		newCfg, err := cfg.AddAlias(name, command, shells)
@@ -46,10 +45,10 @@ Examples:
 		cfg = newCfg
 
 		if err := cfg.Save(ConfigPath); err != nil {
-			return fmt.Errorf("save config: %w", err)
+			return i18n.Errorf("ERR_SaveConfig", err)
 		}
 
-		pterm.Success.Printfln("Alias %s → %s (%s)", name, command, formatShells(shells))
+		pterm.Success.Printfln(i18n.T("CLI_AliasAdded"), name, command, formatShells(shells))
 		return nil
 	},
 }
@@ -79,9 +78,9 @@ func resolveShells() []string {
 
 func formatShells(shells []string) string {
 	if len(shells) == 1 && shells[0] == "common" {
-		return "通用"
+		return i18n.T("Show_ScopeCommon")
 	}
-	label := "shells: "
+	label := i18n.T("Show_ScopeShellsPrefix")
 	for i, s := range shells {
 		if i > 0 {
 			label += ", "

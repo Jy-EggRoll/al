@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jy-eggroll/al/config"
+	"github.com/jy-eggroll/al/internal/i18n"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
@@ -56,7 +57,7 @@ var lsCmd = &cobra.Command{
 
 Optional filter argument filters by alias name or command value.
 `,
-	Args: cobra.MaximumNArgs(1),
+	Args: maxArgsCmd(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		entries := cfg.Flatten()
 
@@ -91,7 +92,7 @@ Optional filter argument filters by alias name or command value.
 		entries = filtered
 
 		if len(entries) == 0 {
-			pterm.Info.Println("No aliases matched")
+			pterm.Info.Println(i18n.T("CLI_NoAliasesMatched"))
 			return nil
 		}
 
@@ -99,13 +100,17 @@ Optional filter argument filters by alias name or command value.
 			return entries[i].Name < entries[j].Name
 		})
 
-		tableData := pterm.TableData{{"别名", "命令", "Shell"}}
+		tableData := pterm.TableData{{
+			i18n.T("LS_HeaderAlias"),
+			i18n.T("LS_HeaderCommand"),
+			i18n.T("LS_HeaderShell"),
+		}}
 		for _, e := range entries {
 			tableData = append(tableData, []string{e.Name, e.Command, e.Shell})
 		}
 
 		pterm.DefaultTable.WithHasHeader().WithData(tableData).Render()
-		fmt.Printf("\n%d aliases\n", len(entries))
+		fmt.Printf("\n"+i18n.T("CLI_AliasCount")+"\n", len(entries))
 		return nil
 	},
 }

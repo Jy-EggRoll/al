@@ -1,11 +1,11 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/jy-eggroll/al/internal/i18n"
 )
 
 type AliasConfig struct {
@@ -32,14 +32,14 @@ func Parse(data []byte) (AliasConfig, error) {
 		Aliases map[string]interface{} `toml:"aliases"`
 	}
 	if err := toml.Unmarshal(data, &raw); err != nil {
-		return Default(), fmt.Errorf("toml parse error: %w", err)
+		return Default(), i18n.Errorf("ERR_TomlParse", err)
 	}
 
 	cfg := Default()
 	for key, val := range raw.Aliases {
 		av, err := toAliasValue(val)
 		if err != nil {
-			return Default(), fmt.Errorf("alias %q: %w", key, err)
+			return Default(), i18n.Errorf("ERR_AliasParse", key, err)
 		}
 		cfg.Aliases[key] = av
 	}
@@ -55,7 +55,7 @@ func toAliasValue(val interface{}) (AliasValue, error) {
 		for i, item := range v {
 			s, ok := item.(string)
 			if !ok {
-				return AliasValue{}, fmt.Errorf("array element %d is not a string", i)
+				return AliasValue{}, i18n.Errorf("ERR_ArrayElementNotString", i)
 			}
 			multi[i] = s
 		}
@@ -71,18 +71,18 @@ func toAliasValue(val interface{}) (AliasValue, error) {
 				for i, e := range item {
 					s, ok := e.(string)
 					if !ok {
-						return AliasValue{}, fmt.Errorf("array element %d for %q is not a string", i, k)
+						return AliasValue{}, i18n.Errorf("ERR_ArrayElementNotStringKey", i, k)
 					}
 					multi[i] = s
 				}
 				obj[k] = AliasObjectValue{Multi: multi}
 			default:
-				return AliasValue{}, fmt.Errorf("unsupported value type for key %q", k)
+				return AliasValue{}, i18n.Errorf("ERR_UnsupportedTypeKey", k)
 			}
 		}
 		return AliasValue{Object: obj}, nil
 	default:
-		return AliasValue{}, fmt.Errorf("unsupported value type")
+		return AliasValue{}, i18n.Errorf("ERR_UnsupportedType")
 	}
 }
 
@@ -135,7 +135,7 @@ func (c AliasConfig) AddAlias(name, command string, shells []string) (AliasConfi
 	existing, exists := c.Aliases[name]
 	isShared := len(shells) == 0 || (len(shells) == 1 && shells[0] == "common")
 
-	// Aliases that don't exist yet — create fresh
+	// Aliases that don't exist yet - create fresh
 	if !exists {
 		if isShared {
 			c.Aliases[name] = AliasValue{Inline: command}
@@ -151,13 +151,13 @@ func (c AliasConfig) AddAlias(name, command string, shells []string) (AliasConfi
 
 	// Type conflict checks
 	if existing.Multi != nil {
-		return c, fmt.Errorf("alias %q is a multi-type, cannot overwrite", name)
+		return c, i18n.Errorf("ERR_MultiCannotOverwrite", name)
 	}
 	if isShared && existing.Object != nil {
-		return c, fmt.Errorf("alias %q already has shell-specific values — run 'al rm %s' first", name, name)
+		return c, i18n.Errorf("ERR_HasShellValues", name, name)
 	}
 	if !isShared && existing.Inline != "" {
-		return c, fmt.Errorf("alias %q is shared across all shells — run 'al rm %s' first", name, name)
+		return c, i18n.Errorf("ERR_SharedRunRm", name, name)
 	}
 
 	// Safe overwrite
@@ -173,15 +173,15 @@ func (c AliasConfig) AddAlias(name, command string, shells []string) (AliasConfi
 }
 
 // EditAlias modifies an existing alias's command and/or shell scope.
-// command = nil → keep existing; shells = nil → keep existing scope.
+// command = nil -> keep existing; shells = nil -> keep existing scope.
 func (c AliasConfig) EditAlias(name string, command *string, shells []string) (AliasConfig, error) {
 	existing, ok := c.Aliases[name]
 	if !ok {
-		return c, fmt.Errorf("alias %q not found", name)
+		return c, i18n.Errorf("ERR_AliasNotFound", name)
 	}
 
 	if command == nil && shells == nil {
-		return c, fmt.Errorf("nothing to change for alias %q", name)
+		return c, i18n.Errorf("ERR_NothingToChange", name)
 	}
 
 	// Resolve effective command
@@ -224,7 +224,7 @@ func (c AliasConfig) EditAlias(name string, command *string, shells []string) (A
 	} else {
 		switch {
 		case existing.Multi != nil:
-			return c, fmt.Errorf("alias %q is a multi-type, edit the TOML file directly", name)
+			return c, i18n.Errorf("ERR_MultiEditDirectly", name)
 		case existing.Inline != "":
 			c.Aliases[name] = AliasValue{Inline: cmd}
 		case existing.Object != nil:
@@ -242,7 +242,7 @@ func (c AliasConfig) EditAlias(name string, command *string, shells []string) (A
 // RemoveAlias deletes an alias by name.
 func (c AliasConfig) RemoveAlias(name string) (AliasConfig, error) {
 	if _, ok := c.Aliases[name]; !ok {
-		return c, fmt.Errorf("alias %q not found", name)
+		return c, i18n.Errorf("ERR_AliasNotFound", name)
 	}
 	delete(c.Aliases, name)
 	return c, nil
@@ -273,12 +273,12 @@ func (c AliasConfig) Save(path string) error {
 
 	f, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("create config: %w", err)
+		return i18n.Errorf("ERR_ConfigCreateFile", err)
 	}
 	defer f.Close()
 
 	if err := toml.NewEncoder(f).Encode(map[string]interface{}{"aliases": flat}); err != nil {
-		return fmt.Errorf("encode toml: %w", err)
+		return i18n.Errorf("ERR_EncodeToml", err)
 	}
 	return nil
 }
