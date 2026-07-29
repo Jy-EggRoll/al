@@ -146,3 +146,45 @@ Help_AvailableCommands = "可用命令："
 Help_Flags = "参数："
 Help_GlobalFlags = "全局参数："
 Help_MoreInfo = "使用 \"%s [command] --help\" 查看该命令的更多信息。"
+
+# ===== cobra 框架内置文本（实现框架文本的彻底 i18n 化）=====
+Cobra_ErrorPrefix = "错误："
+
+Cobra_HelpFlagUsageFmt = "%s 的帮助"
+Cobra_HelpFlagUsageThis = "显示本命令的帮助"
+Cobra_VersionFlagUsageFmt = "%s 的版本"
+Cobra_VersionFlagUsageThis = "显示本命令的版本"
+
+Cobra_UnknownFlagFmt = "未知选项：--%s"
+Cobra_UnknownShorthandFlagFmt = "未知短选项：%q（位于 -%s）"
+Cobra_FlagNotExistFmt = "选项 %q 不存在"
+Cobra_FlagNeedsArgFmt = "选项需要参数：--%s"
+Cobra_InvalidArgFmt = "选项 %q 的值 %q 无效：%v"
+Cobra_BadFlagSyntaxFmt = "选项语法错误：%s"
+
+Cobra_UnknownCommandFmt = "未知命令 %q（属于 %q）%s"
+Cobra_InvalidArgForCmdFmt = "无效参数 %q（属于 %q）%s"
+Cobra_RequiresMinArgsFmt = "至少需要 %d 个参数，实际收到 %d 个"
+Cobra_AcceptsMaxArgsFmt = "最多接受 %d 个参数，实际收到 %d 个"
+Cobra_AcceptsExactArgsFmt = "需要 %d 个参数，实际收到 %d 个"
+Cobra_AcceptsRangeArgsFmt = "需要 %d 到 %d 个参数，实际收到 %d 个"
+
+Cobra_DidYouMean = "您是不是想输入："
+
+Cobra_UsageHintFmt = "运行 '%v --help' 查看用法。"
+
+CMD_help_Short = "显示任意命令的帮助"
+CMD_help_Long = "为应用程序中的任意命令提供帮助。\n直接输入 al help [命令路径] 即可查看完整说明。"
+Cobra_UnknownHelpTopic = "未知的帮助主题 %#q"
+
+CMD_completion_Short = "为指定 shell 生成自动补全脚本"
+CMD_completion_Long = "为 al 生成指定 shell 的自动补全脚本。\n查看各子命令的帮助以了解如何使用生成的脚本。"
+Cobra_CompletionUnsupportedShell = "不支持的 shell：%s（应为 bash、zsh、fish、powershell 之一）"
+CMD_completion_bash_Short = "为 bash 生成自动补全脚本"
+CMD_completion_bash_Long = "为 bash shell 生成自动补全脚本。\n\n该脚本依赖 'bash-completion' 软件包。\n若尚未安装，可通过操作系统的包管理器安装。\n\n在当前 shell 会话中加载补全：\n\n  source <(al completion bash)\n\n若要在每次新会话中加载，执行以上命令一次即可。"
+CMD_completion_zsh_Short = "为 zsh 生成自动补全脚本"
+CMD_completion_zsh_Long = "为 zsh shell 生成自动补全脚本。\n\n若当前环境尚未启用 shell 补全，需先启用。\n执行以下命令一次：\n\n  echo 'autoload -Uz compinit; compinit' >> ~/.zshrc\n\n在当前 shell 会话中加载补全：\n\n  source <(al completion zsh)\n\n若要在每次新会话中加载，执行以上命令一次即可。"
+CMD_completion_fish_Short = "为 fish 生成自动补全脚本"
+CMD_completion_fish_Long = "为 fish shell 生成自动补全脚本。\n\n在当前 shell 会话中加载补全：\n\n  al completion fish | source\n\n若要在每次新会话中加载，执行以上命令一次即可。"
+CMD_completion_powershell_Short = "为 powershell 生成自动补全脚本"
+CMD_completion_powershell_Long = "为 powershell shell 生成自动补全脚本。\n\n在当前 shell 会话中加载补全：\n\n  al completion powershell | Out-String | Invoke-Expression\n\n若要在每次新会话中加载，执行以上命令一次即可。"

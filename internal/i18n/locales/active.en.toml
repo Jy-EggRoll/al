@@ -149,3 +149,54 @@ Help_AvailableCommands = "Available Commands:"
 Help_Flags = "Flags:"
 Help_GlobalFlags = "Global Flags:"
 Help_MoreInfo = "Use \"%s [command] --help\" for more information about a command."
+
+# ===== cobra 框架内置文本（实现框架文本的彻底 i18n 化）=====
+# 错误前缀（覆盖 cobra 的 "Error:"，通过 SetErrPrefix）
+Cobra_ErrorPrefix = "Error:"
+
+# --help / --version 选项的 usage 文案（在 InitDefaultHelpFlag/InitDefaultVersionFlag 之前预置，
+# 使 cobra 不再注入英文默认文案 "help for ..." / "version for ..."）
+Cobra_HelpFlagUsageFmt = "help for %s"
+Cobra_HelpFlagUsageThis = "help for this command"
+Cobra_VersionFlagUsageFmt = "version for %s"
+Cobra_VersionFlagUsageThis = "version for this command"
+
+# pflag 解析错误的本地化（通过 SetFlagErrorFunc 拦截后按类型翻译）
+Cobra_UnknownFlagFmt = "unknown flag: --%s"
+Cobra_UnknownShorthandFlagFmt = "unknown shorthand flag: %q in -%s"
+Cobra_FlagNotExistFmt = "flag %q does not exist"
+Cobra_FlagNeedsArgFmt = "flag needs an argument: --%s"
+Cobra_InvalidArgFmt = "invalid argument %q for %q flag: %v"
+Cobra_BadFlagSyntaxFmt = "bad flag syntax: %s"
+
+# cobra 参数校验 / 未知命令错误的本地化（Find/legacyArgs、OnlyValidArgs、Min/Max/Exact/RangeArgs）
+Cobra_UnknownCommandFmt = "unknown command %q for %q%s"
+Cobra_InvalidArgForCmdFmt = "invalid argument %q for %q%s"
+Cobra_RequiresMinArgsFmt = "requires at least %d arg(s), only received %d"
+Cobra_AcceptsMaxArgsFmt = "accepts at most %d arg(s), received %d"
+Cobra_AcceptsExactArgsFmt = "accepts %d arg(s), received %d"
+Cobra_AcceptsRangeArgsFmt = "accepts between %d and %d arg(s), received %d"
+
+# "Did you mean this?" 这类拼写建议标题（findSuggestions 硬编码英文，拦截后替换）
+Cobra_DidYouMean = "Did you mean this?"
+
+# 错误后的用法提示（覆盖 cobra 的 "Run '%v --help' for usage."）
+Cobra_UsageHintFmt = "Run '%v --help' for usage."
+
+# help 命令本身的文本（覆盖 cobra 内置 help 命令的 Short/Long 与未知主题提示）
+CMD_help_Short = "Help about any command"
+CMD_help_Long = "Help provides help for any command in the application.\nSimply type al help [path to command] for full details."
+Cobra_UnknownHelpTopic = "Unknown help topic %#q"
+
+# completion 命令本身的文本（覆盖 cobra 内置 completion 命令，禁用默认命令后自实现）
+CMD_completion_Short = "Generate the autocompletion script for the specified shell"
+CMD_completion_Long = "Generate the autocompletion script for al for the specified shell.\nSee each sub-command's help for details on how to use the generated script."
+Cobra_CompletionUnsupportedShell = "unsupported shell: %s (expected one of bash, zsh, fish, powershell)"
+CMD_completion_bash_Short = "Generate the autocompletion script for the bash shell"
+CMD_completion_bash_Long = "Generate the autocompletion script for the bash shell.\n\nThis script depends on the 'bash-completion' package.\nIf it is not installed already, you can install it via your OS's package manager.\n\nTo load completions in your current shell session:\n\n  source <(al completion bash)\n\nTo load completions for every new session, execute the above command once."
+CMD_completion_zsh_Short = "Generate the autocompletion script for the zsh shell"
+CMD_completion_zsh_Long = "Generate the autocompletion script for the zsh shell.\n\nIf shell completion is not already enabled in your environment, you need to enable it.\nRun the following once:\n\n  echo 'autoload -Uz compinit; compinit' >> ~/.zshrc\n\nTo load completions in your current shell session:\n\n  source <(al completion zsh)\n\nTo load completions for every new session, execute the above command once."
+CMD_completion_fish_Short = "Generate the autocompletion script for the fish shell"
+CMD_completion_fish_Long = "Generate the autocompletion script for the fish shell.\n\nTo load completions in your current shell session:\n\n  al completion fish | source\n\nTo load completions for every new session, execute the above command once."
+CMD_completion_powershell_Short = "Generate the autocompletion script for the powershell shell"
+CMD_completion_powershell_Long = "Generate the autocompletion script for the powershell shell.\n\nTo load completions in your current shell session:\n\n  al completion powershell | Out-String | Invoke-Expression\n\nTo load completions for every new session, execute the above command once."
