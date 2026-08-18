@@ -192,6 +192,8 @@ al add gs "git status"
 
 这个机制参考了 `direnv`、`pyenv` 等工具的 Shell 集成模式——利用 `command` 关键字调用真实二进制避免递归，子进程退出后自动刷新父 Shell 状态。支持所有四种 Shell（zsh、bash、fish、powershell），各自以对应语言的函数语法实现。PowerShell 中使用 `function global:` 确保别名函数落入全局作用域。
 
+PowerShell 别名函数会读取管道输入并转发给命令链的第一个命令：例如配置了 `fzf = "fzf --height=50%"` 之后，`Get-ChildItem | fzf`、`rg pattern | fzf` 都能像 bash/zsh 一样工作；没有管道输入时命令照常以交互模式运行。这弥补了 PowerShell 函数默认丢弃管道数据的差异（bash/zsh 的 alias 直接展开、fish 函数继承 stdin，天然支持管道，唯独 PowerShell 需要包装函数显式处理 `$input`）。
+
 ## 配置
 
 文件位置：`~/.config/al/alias.toml`

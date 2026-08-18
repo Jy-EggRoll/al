@@ -70,7 +70,15 @@ func TestFishFunc_selfRefBinary(t *testing.T) {
 
 func TestPwshFunc_selfReferencing(t *testing.T) {
 	got := pwshFunc("fzf", "fzf --height=50% --ansi")
-	want := "Remove-Alias -Name fzf -Force -ErrorAction SilentlyContinue\nfunction global:fzf { & (Get-Command fzf -Type Application) --height=50% --ansi @Args }"
+	want := `Remove-Alias -Name fzf -Force -ErrorAction SilentlyContinue
+function global:fzf {
+  $__al_piped = @($input)
+  if ($__al_piped.Count -gt 0) {
+    $__al_piped | & (Get-Command fzf -Type Application | Select-Object -First 1) --height=50% --ansi @Args
+  } else {
+    & (Get-Command fzf -Type Application | Select-Object -First 1) --height=50% --ansi @Args
+  }
+}`
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
@@ -78,7 +86,15 @@ func TestPwshFunc_selfReferencing(t *testing.T) {
 
 func TestPwshFunc_normal(t *testing.T) {
 	got := pwshFunc("f", "fd . --hidden | fzf --preview=\"bat {}\"")
-	want := "Remove-Alias -Name f -Force -ErrorAction SilentlyContinue\nfunction global:f { fd . --hidden | fzf --preview=\"bat {}\" @Args }"
+	want := `Remove-Alias -Name f -Force -ErrorAction SilentlyContinue
+function global:f {
+  $__al_piped = @($input)
+  if ($__al_piped.Count -gt 0) {
+    $__al_piped | fd . --hidden | fzf --preview="bat {}" @Args
+  } else {
+    fd . --hidden | fzf --preview="bat {}" @Args
+  }
+}`
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
@@ -86,7 +102,15 @@ func TestPwshFunc_normal(t *testing.T) {
 
 func TestPwshFunc_dotdotAlias(t *testing.T) {
 	got := pwshFunc("..", "cd ..")
-	want := "Remove-Alias -Name .. -Force -ErrorAction SilentlyContinue\nfunction global:.. { cd .. @Args }"
+	want := `Remove-Alias -Name .. -Force -ErrorAction SilentlyContinue
+function global:.. {
+  $__al_piped = @($input)
+  if ($__al_piped.Count -gt 0) {
+    $__al_piped | cd .. @Args
+  } else {
+    cd .. @Args
+  }
+}`
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
@@ -94,7 +118,15 @@ func TestPwshFunc_dotdotAlias(t *testing.T) {
 
 func TestPwshFunc_simple(t *testing.T) {
 	got := pwshFunc("cls", "clear")
-	want := "Remove-Alias -Name cls -Force -ErrorAction SilentlyContinue\nfunction global:cls { clear @Args }"
+	want := `Remove-Alias -Name cls -Force -ErrorAction SilentlyContinue
+function global:cls {
+  $__al_piped = @($input)
+  if ($__al_piped.Count -gt 0) {
+    $__al_piped | clear @Args
+  } else {
+    clear @Args
+  }
+}`
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
