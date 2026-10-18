@@ -139,25 +139,30 @@ bash = "eza --git --icons=auto --all"
 fish = "eza --git --icons=auto --all"
 ```
 
-`al add`、`al edit`、`al rm` 会改写这个文件，手动编辑同样有效。把它放进 dotfiles 仓库后，新机器 clone 下来即可同步全部别名。
+`al add`、`al edit`、`al rm` 会改写这个文件，手动编辑别名本身同样有效。但需要注意：`al` 写回时会用内存中的配置重新生成整个文件，**你在文件里手写的注释与空行不会保留**。因此建议把注释写在别处（例如 dotfiles 仓库的 README），文件本身只放别名。
+
+把它放进 dotfiles 仓库后，新机器 clone 下来即可同步全部别名。
 
 ## 构建
+
+构建与发版通过 Taskfile 驱动，平台清单集中在一份 `release.json` 里：
 
 ```bash
 git clone https://github.com/jy-eggroll/al
 cd al
+task                # 先校验再构建全部平台
 task build          # 当前平台
-task build-all      # 所有平台（并行）
+task build-all      # 所有平台（由 eggokit 的 buildall 并行构建）
 ```
 
-产物输出在 `build/` 目录：
+产物输出在 `build/` 目录，命名规则为 `al-<系统>-<架构>`，Windows 产物带 `.exe`。支持哪些平台由 `release.json` 的 `platforms` 决定，增删平台只改这份清单，无需改动 Taskfile。
 
-| 操作系统 | 架构 |
-|----------|------|
-| Linux | 386, amd64, arm, arm64 |
-| macOS | amd64, arm64 |
-| Windows | 386, amd64, arm64 |
-| FreeBSD | amd64, arm64 |
+```bash
+task verify           # 依赖整洁、格式、静态检查、单测、竞态检测
+task changelog VERSION=1.0.0   # 按 CHANGELOG.md 生成发布说明并输出到 stdout
+```
+
+发布说明的平台下载表格与小节内容分别来自 `release.json` 与 `CHANGELOG.md`，因此发版前要在 `CHANGELOG.md` 里补上同名版本小节，否则该版本的更新内容会为空。
 
 ### 手动编译 / 交叉编译
 
