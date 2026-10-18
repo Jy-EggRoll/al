@@ -88,7 +88,7 @@ func TestForShell_shellSpecific(t *testing.T) {
 	cfg := Default()
 	cfg.Aliases["rmrf"] = AliasValue{
 		Object: map[string]AliasObjectValue{
-			"zsh": {Inline: "rm -rf"},
+			"zsh":  {Inline: "rm -rf"},
 			"fish": {Inline: "rm -rf"},
 		},
 	}
@@ -178,7 +178,7 @@ func TestFlatten_shellSpecific(t *testing.T) {
 	cfg := Default()
 	cfg.Aliases["rmrf"] = AliasValue{
 		Object: map[string]AliasObjectValue{
-			"zsh": {Inline: "rm -rf"},
+			"zsh":  {Inline: "rm -rf"},
 			"bash": {Inline: "rm -rfv"},
 		},
 	}
@@ -310,7 +310,7 @@ func TestEditAlias_changeCommand_shellSpecific(t *testing.T) {
 	cfg := Default()
 	cfg.Aliases["rmrf"] = AliasValue{
 		Object: map[string]AliasObjectValue{
-			"zsh": {Inline: "rm -rf"},
+			"zsh":  {Inline: "rm -rf"},
 			"fish": {Inline: "rm -rf"},
 		},
 	}
@@ -342,7 +342,7 @@ func TestShells(t *testing.T) {
 	cfg := Default()
 	cfg.Aliases["a"] = AliasValue{
 		Object: map[string]AliasObjectValue{
-			"zsh": {Inline: "a"},
+			"zsh":  {Inline: "a"},
 			"bash": {Inline: "a"},
 		},
 	}

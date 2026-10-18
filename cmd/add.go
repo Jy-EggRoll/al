@@ -8,12 +8,12 @@ import (
 )
 
 var (
-	flagCommon    bool
-	flagZsh       bool
-	flagBash      bool
-	flagFish      bool
+	flagCommon     bool
+	flagZsh        bool
+	flagBash       bool
+	flagFish       bool
 	flagPowershell bool
-	flagForce     bool
+	flagForce      bool
 )
 
 var addCmd = &cobra.Command{

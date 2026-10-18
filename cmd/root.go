@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	cfg       config.AliasConfig
+	cfg        config.AliasConfig
 	ConfigPath string
-	Version   string
-	BuildTime string
+	Version    string
+	BuildTime  string
 )
 
 var rootCmd = &cobra.Command{
