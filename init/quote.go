@@ -9,8 +9,19 @@ func posixQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }
 
+// fishFunc 生成单个 fish 函数定义。
+//
+// 空值防御：strings.Fields("") 返回长度 0 的切片，直接取 words[0] 会 panic
+// （index out of range [0] with length 0），把 al init fish 整个流程炸掉。
+// 空值理论上已被 config 层的 ValidateAliasCommand 挡住，但配置文件是用户手工编辑的
+// 纯文本，TOML 里写 `m = []` 或 `m = ""` 都能绕过写入侧校验直接进入这里，
+// 因此生成器必须自己也能扛住空值——这是双保险，不是重复劳动。
+// 返回值不含任何 fish 语句，调用方打印出来就是空行，无害。
 func fishFunc(name, val string) string {
 	words := strings.Fields(val)
+	if len(words) == 0 {
+		return ""
+	}
 	if words[0] == name {
 		return fmt.Sprintf("function %s\n    command %s $argv\nend", name, val)
 	}
@@ -62,8 +73,15 @@ func fishFunc(name, val string) string {
 //   - cd 等 PowerShell cmdlet 收到外部管道输入时可能触发参数绑定行为，这属于
 //     用户主动敲管道才会遇到的情况，与 POSIX shell 语义对齐，可接受。
 //   - 函数体由单行变为多行，al init powershell 的输出随之变大，无性能影响。
+//
+// 空值防御：与 fishFunc 同理，strings.Fields 对空串返回空切片，取 [0] 会 panic。
+// config 层已拒绝空命令，但 TOML 可被手工写成空数组/空串而绕过写入校验，
+// 所以这里也做一层防御，返回空串让该别名在输出中静默跳过。
 func pwshFunc(name, val string) string {
-	firstWord := strings.Fields(val)[0]
+	firstWord := ""
+	if words := strings.Fields(val); len(words) > 0 {
+		firstWord = words[0]
+	}
 	body := val
 	// 自引用别名（别名名 == 命令首词，如 fzf = "fzf --height=50%"）若直接内联
 	// 会无限递归调用函数自身，这里把首词替换为调用同名的可执行文件来打破递归。
@@ -71,9 +89,15 @@ func pwshFunc(name, val string) string {
 	// 可执行文件（如 mise/scoop 的 shim 加真实二进制）时，Get-Command 会返回多个
 	// CommandInfo，直接 & 会把整个数组 splat 成若干参数而报
 	// "The term 'fzf fzf fzf' is not recognized as a name of a cmdlet"。
-	if firstWord == name {
+	//
+	// firstWord 为空串时不可能等于 name（name 已被 ValidateAliasName 拒绝为空），
+	// 因此空值不会走到这个替换分支，直接生成空函数体也无害——调用方打印空行。
+	if firstWord == name && firstWord != "" {
 		body = strings.Replace(val, firstWord,
 			fmt.Sprintf("& (Get-Command %s -Type Application | Select-Object -First 1)", firstWord), 1)
+	}
+	if strings.TrimSpace(body) == "" {
+		return ""
 	}
 	return fmt.Sprintf(`Remove-Alias -Name %s -Force -ErrorAction SilentlyContinue
 function global:%s {

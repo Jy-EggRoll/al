@@ -1,11 +1,12 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/jy-eggroll/eggokit/atomicfile"
 )
 
 type AliasConfig struct {
@@ -27,6 +28,16 @@ func Default() AliasConfig {
 	return AliasConfig{Aliases: map[string]AliasValue{}}
 }
 
+// Parse 解析 TOML 配置字节流。
+//
+// 除了 TOML 语法错误，这里还会拒绝别名名不合法的配置。理由：别名名最终会被四种 Shell
+// 解析，非法名（如 `x; echo X`）在 `al init bash` 的输出里等同于一段可执行命令，
+// 属于真正的代码注入，不是「显示难看」这种量级的问题。因此配置里出现这种名字时，
+// 宁可让命令整体失败并指出是哪个名字，也不要继续把它渲染成 Shell 代码。
+//
+// 潜在影响点：解析失败会让所有命令（含只读的 ls/show/init）以非零退出码中止，
+// 用户必须手工编辑配置文件删掉那个名字才能继续使用 al——这是刻意选择的代价，
+// 因为带着注入名的配置本身就是坏的。
 func Parse(data []byte) (AliasConfig, error) {
 	var raw struct {
 		Aliases map[string]interface{} `toml:"aliases"`
@@ -37,6 +48,11 @@ func Parse(data []byte) (AliasConfig, error) {
 
 	cfg := Default()
 	for key, val := range raw.Aliases {
+		// 先校验名字再解析值：名字不合法时，值的具体形态无关紧要，
+		// 而且先报名字能让错误信息直接指向「用户该改哪里」。
+		if err := ValidateAliasName(key); err != nil {
+			return Default(), err
+		}
 		av, err := toAliasValue(val)
 		if err != nil {
 			return Default(), fmt.Errorf("alias %q: %w", key, err)
@@ -131,7 +147,17 @@ func (c AliasConfig) Shells() []string {
 }
 
 // AddAlias adds or updates an alias. shells = ["common"] or empty for shared.
+//
+// 名字与命令在改动内存中的配置之前先校验：一旦校验通过，后续 Save 才会把内容写盘，
+// 因此这里挡住的东西绝不会以「半个合法状态」留在配置文件里。
 func (c AliasConfig) AddAlias(name, command string, shells []string) (AliasConfig, error) {
+	if err := ValidateAliasName(name); err != nil {
+		return c, err
+	}
+	if err := ValidateAliasCommand(command); err != nil {
+		return c, err
+	}
+
 	existing, exists := c.Aliases[name]
 	isShared := len(shells) == 0 || (len(shells) == 1 && shells[0] == "common")
 
@@ -174,7 +200,19 @@ func (c AliasConfig) AddAlias(name, command string, shells []string) (AliasConfi
 
 // EditAlias modifies an existing alias's command and/or shell scope.
 // command = nil → keep existing; shells = nil → keep existing scope.
+//
+// 名字与命令同样在写盘前校验。注意命令可能是「沿用旧值」（command == nil）：
+// 这种情况下沿用值已经通过过校验，不会在这里被误报；只有用户显式传入新命令时才校验。
 func (c AliasConfig) EditAlias(name string, command *string, shells []string) (AliasConfig, error) {
+	if err := ValidateAliasName(name); err != nil {
+		return c, err
+	}
+	if command != nil {
+		if err := ValidateAliasCommand(*command); err != nil {
+			return c, err
+		}
+	}
+
 	existing, ok := c.Aliases[name]
 	if !ok {
 		return c, fmt.Errorf("alias %q not found", name)
@@ -248,7 +286,23 @@ func (c AliasConfig) RemoveAlias(name string) (AliasConfig, error) {
 	return c, nil
 }
 
-// Save writes the config back to disk as TOML.
+// Save 把配置以 TOML 原子写回磁盘。
+//
+// 为什么不再用 os.Create 直接往目标文件里流式编码：
+// os.Create 会先把目标文件截断成 0 字节，此后才开始写入。截断与写入之间存在一个窗口，
+// 进程在此期间崩溃、磁盘写满、或编码中途返回错误，用户留下的就是一个空文件或半截 TOML。
+// 这份文件是用户别名的唯一存放处，没有第二份副本，损坏后无法自动恢复。
+//
+// 现在的做法：先在内存里把 TOML 完整编码进 bytes.Buffer，再由 atomicfile.Write
+// 以「同目录临时文件 + rename」整体落位。编码失败时目标文件根本没被碰过；
+// 写入失败时目标文件保持原样，只有临时文件被清理掉。用户在任何时刻看到的
+// 配置文件，要么是完整的旧版本，要么是完整的新版本。
+//
+// 为什么必须先编码到 buffer：toml.NewEncoder 需要 io.Writer，而 atomicfile.Write
+// 收的是 []byte，两者的接口形状不同。buffer 在这里同时承担两个职责：
+// 作为编码目标和「编码成功与否」的判据——只要 Encode 返回 nil，就知道内容完整。
+// 潜在影响点：整个配置现在会被完整载入内存。当前量级（几百条别名）下开销可忽略；
+// 若未来配置规模长到数 MB，需要重新评估，但到那时更该做的是分文件而非改回流式写。
 func (c AliasConfig) Save(path string) error {
 	flat := map[string]interface{}{}
 	for name, av := range c.Aliases {
@@ -271,14 +325,17 @@ func (c AliasConfig) Save(path string) error {
 		}
 	}
 
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("create config: %w", err)
-	}
-	defer f.Close()
-
-	if err := toml.NewEncoder(f).Encode(map[string]interface{}{"aliases": flat}); err != nil {
+	// 先把 TOML 完整编码进内存：编码失败时磁盘上的目标文件完全不受影响，
+	// 这是「编码失败不破坏原文件」的关键前提。
+	var buf bytes.Buffer
+	if err := toml.NewEncoder(&buf).Encode(map[string]interface{}{"aliases": flat}); err != nil {
 		return fmt.Errorf("encode toml: %w", err)
+	}
+
+	// atomicfile.Write 内部会按需创建父目录，因此这里不需要（也不应该）提前 MkdirAll：
+	// 提前建目录会让只读命令也在用户机器上留下空目录。
+	if err := atomicfile.Write(path, buf.Bytes()); err != nil {
+		return fmt.Errorf("write config: %w", err)
 	}
 	return nil
 }

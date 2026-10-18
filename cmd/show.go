@@ -47,7 +47,11 @@ var showCmd = &cobra.Command{
 			}
 		}
 
-		pterm.Println(pterm.Bold.Sprint("来源: ") + "~/.config/al/alias.toml")
+		// 路径来自 ConfigPath 而非字面量：真实路径由 root.go 的 PersistentPreRunE
+		// 按 os.UserHomeDir() 拼出，写死成 "~/.config/al/alias.toml" 会在
+		// HOME 被改动（容器、CI、测试隔离）时显示一个用户机器上并不存在的路径，
+		// 排查问题时把用户引向错误的方向。
+		pterm.Println(pterm.Bold.Sprint("来源: ") + ConfigPath)
 		return nil
 	},
 }

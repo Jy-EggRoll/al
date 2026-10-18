@@ -131,3 +131,26 @@ function global:cls {
 		t.Fatalf("expected %q, got %q", want, got)
 	}
 }
+
+// TestFishFunc_emptyValue 钉住空值与全空白值不再 panic。
+// 背景：strings.Fields("") 返回空切片，取 [0] 会 index out of range，
+// 把 al init fish 整个流程炸掉。空值理论上被 config 层拒绝，
+// 但 TOML 可手写成 m = [] 绕过写入校验，所以生成器必须自己扛住。
+func TestFishFunc_emptyValue(t *testing.T) {
+	if got := fishFunc("m", ""); got != "" {
+		t.Fatalf("expected empty output for empty value, got %q", got)
+	}
+	if got := fishFunc("m", "   "); got != "" {
+		t.Fatalf("expected empty output for whitespace-only value, got %q", got)
+	}
+}
+
+// TestPwshFunc_emptyValue 与 TestFishFunc_emptyValue 同理，覆盖 powershell 生成器。
+func TestPwshFunc_emptyValue(t *testing.T) {
+	if got := pwshFunc("m", ""); got != "" {
+		t.Fatalf("expected empty output for empty value, got %q", got)
+	}
+	if got := pwshFunc("m", "   "); got != "" {
+		t.Fatalf("expected empty output for whitespace-only value, got %q", got)
+	}
+}
