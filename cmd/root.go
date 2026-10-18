@@ -66,6 +66,11 @@ Supported shells: bash, zsh, fish, powershell`,
 				cfg = config.Default()
 				return nil
 			}
+			// 读不出来时一并关掉 usage 输出：这是运行期错误（配置文件的存在与权限问题），
+			// 与「命令参数用错」是两回事，后者用户确实需要看到用法。cobra 默认在 RunE
+			// 返回错误后追加整段 Usage 与 Flags，对一个「你的配置文件读不了」的错误
+			// 附上十几行参数说明只是噪声，真正的信息是上面那个带绝对路径的错误
+			cmd.SilenceUsage = true
 			return fmt.Errorf("read config file %s: %w", ConfigPath, err)
 		}
 
@@ -73,6 +78,9 @@ Supported shells: bash, zsh, fish, powershell`,
 		// 当成现有配置保存，与上面是同一个「静默清空用户数据」的后果。
 		c, err := config.Parse(data)
 		if err != nil {
+			// 与上面同一理由：关掉 usage，让用户只看到带路径与行号的解析错误。
+			// 不放在 rootCmd 的定义处统一设置，那会让参数用错时也看不到用法
+			cmd.SilenceUsage = true
 			return fmt.Errorf("parse config file %s: %w", ConfigPath, err)
 		}
 		cfg = c
