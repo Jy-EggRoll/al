@@ -1,0 +1,26 @@
+# 该工作流只能通过正式版本的标签自动触发
+
+name: Publish Release
+
+on:
+    push:
+        tags:
+            - "[0-9]+.[0-9]+.[0-9]+" # 匹配 x.y.z 格式的正式版本标签
+
+# 权限刻意保留在此处而不再写进可复用工作流：创建 Release 需要写权限，该权限以调用方为上限
+permissions:
+    contents: write
+
+jobs:
+    # 具体工作全部委托给 eggokit 的可复用工作流，本文件只保留触发条件与权限
+    publish:
+        uses: Jy-EggRoll/eggokit/.github/workflows/go-release.yml@main
+        with:
+            # app 用于拼装 Release 标题，必须与 release.json 里的 app 一致
+            app: al
+            mode: release
+            # 正式发布取触发标签作为版本号
+            version_source: tag
+            artifact_prefix: binaries-
+            retention_days: 90
+            # changelog_lang 不传：留空即用 release.json 里的 releaseNotesLang(zh-CN)

@@ -1,0 +1,27 @@
+name: Package Development Release
+
+on:
+    push:
+        tags:
+            - "[0-9]+.[0-9]+.[0-9]+.dev.[0-9]+" # 匹配 x.y.z.dev.n 格式的开发版本标签
+    workflow_dispatch: # 支持手动运行
+
+# 权限刻意保留在此处而不再写进可复用工作流：创建 Release 需要写权限，该权限以调用方为上限
+permissions:
+    contents: write
+
+jobs:
+    # 具体工作全部委托给 eggokit 的可复用工作流，本文件只保留触发条件与权限
+    package:
+        uses: Jy-EggRoll/eggokit/.github/workflows/go-release.yml@main
+        with:
+            # app 用于拼装 Release 标题，必须与 release.json 里的 app 一致
+            app: al
+            # 标签触发：构建后创建开发预发布；手动触发：只上传产物、不建 Release
+            # 因此按事件在 artifact / prerelease 两种投递方式之间切换
+            mode: ${{ github.event_name == 'workflow_dispatch' && 'artifact' || 'prerelease' }}
+            # 标签触发取标签版本号；手动运行取带 dev- 前缀的时间戳版本号
+            version_source: ${{ github.event_name == 'workflow_dispatch' && 'dev-timestamp' || 'tag' }}
+            artifact_prefix: binaries-
+            retention_days: 30
+            # changelog_lang 不传：留空即用 release.json 里的 releaseNotesLang(zh-CN)
