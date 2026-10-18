@@ -1,229 +1,178 @@
 version: '3'
 
+# al 的构建与发布任务。
+#
+# 平台清单、产物命名与版本注入目标全部来自仓库根目录的 release.json（即 eggokit 的
+# release.Manifest），因此「本项目发布哪些平台」只有一处真源：增删平台只改清单，
+# 不再需要在 Taskfile 里人肉同步十几个 build:* 任务（改造前那份同步漏一处就少一个产物）。
+#
+# 门禁（verify）与构建（build-all）刻意分开且串行：default 先验证再构建，
+# 失败时立即停止，避免用一份没通过校验的源码产出发布产物。
+
 vars:
   APP: al
   VERSION:
     sh: printf '%s' "${VERSION:-$(date '+%Y-%m-%d-%H-%M-%S')}"
   BUILDTIME:
     sh: printf '%s' "${BUILDTIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+  # TYPE 决定发布说明的语气：release 用于正式版，dev 用于开发预发布
+  TYPE:
+    sh: printf '%s' "${TYPE:-release}"
+  # NOTES_LANG 是发布说明语言的临时覆盖项，留空表示用清单里的 releaseNotesLang(zh-CN)
+  # 用 shell 变量回填是为了让 `NOTES_LANG=en task changelog ...` 这种写法也能生效；
+  # 可复用工作流是以 CLI 变量（task changelog NOTES_LANG=...）传入的，CLI 变量优先级更高
+  NOTES_LANG:
+    sh: printf '%s' "${NOTES_LANG:-}"
+  # LDFLAGS 只服务 build 与 verify 之外的本地单平台构建；多平台构建由 buildall 自行拼装
   LDFLAGS: '-s -w -X github.com/jy-eggroll/al/cmd.Version={{.VERSION}} -X github.com/jy-eggroll/al/cmd.BuildTime={{.BUILDTIME}}'
 
 tasks:
   default:
-    desc: Build for all platforms
-    deps:
-      - build-all
+    desc: Verify and build for all platforms
+    # cmds 按声明顺序执行，避免 deps 并行导致构建在验证完成前开始
+    cmds:
+      - task: verify
+      - task: build-all
 
+  # mod-tidy 与 mod-tidy:check 是一对：前者整理依赖，后者只校验不修改
+  # 门禁刻意使用 -diff 而不是直接执行 tidy：直接执行只会就地改掉 go.mod，
+  # 检查本身永远不会失败，形同虚设
+  mod-tidy:
+    desc: 整理 Go 模块依赖 (go mod tidy)
+    cmds:
+      - go mod tidy
+
+  mod-tidy:check:
+    desc: 校验 go.mod/go.sum 已整理（只读，不修改文件）
+    cmds:
+      - go mod tidy -diff
+
+  # 只把磁盘上确实存在的文件交给 gofmt：git ls-files 读的是索引，会把「已删除但尚未暂存」
+  # 的文件一并列出，重构中途直接交给 gofmt 会以 lstat 失败收场，报出来的却是「格式检查不过」——
+  # 一个与格式毫无关系的假失败
+  fmt:check:
+    desc: Check Go source formatting
+    cmds:
+      - |
+        unformatted=""
+        for file in $(git ls-files --cached --others --exclude-standard '*.go'); do
+          if [ -f "$file" ]; then
+            result="$(gofmt -l "$file")"
+            if [ -n "$result" ]; then
+              unformatted="$unformatted$result
+        "
+            fi
+          fi
+        done
+        if [ -n "$unformatted" ]; then
+          printf '以下 Go 文件未通过 gofmt 检查：\n%s' "$unformatted" >&2
+          exit 1
+        fi
+
+  # fmt 是 fmt:check 的修复动作，仅用于本地，不纳入 verify
+  # 与 fmt:check 使用同一份文件集（受版本控制的 Go 文件），避免两处标准不一致
+  fmt:
+    desc: 格式化 Go 代码 (gofmt)
+    cmds:
+      - |
+        for file in $(git ls-files --cached --others --exclude-standard '*.go'); do
+          if [ -f "$file" ]; then
+            gofmt -w "$file"
+          fi
+        done
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  test:
+    desc: Run all Go tests without cached results
+    cmds:
+      - go test ./... -count=1
+
+  # 配置写盘走的是 shell 文件系统操作与 embed 资源，竞态检测必须有
+  test:race:
+    desc: Run all Go tests with the race detector
+    cmds:
+      - go test -race ./... -count=1
+
+  verify:
+    desc: Run all verification checks
+    # 验证项顺序执行，保证失败时立即停止且日志归属清晰
+    # 依赖整理排在最前：go.mod/go.sum 与源码不一致时，后续检查的结论都不可信
+    cmds:
+      - task: mod-tidy:check
+      - task: fmt:check
+      - task: vet
+      - task: test
+      - task: test:race
+
+  # verify:actions 是工作流层的按需验收：actionlint 能拦住 YAML 语法错误、未定义的
+  # inputs/secrets、非法的事件与权限写法等——这些错在 CI 上要等到工作流被真正触发才暴露，
+  # 本地先跑一遍能省一轮「推送 → 等红灯 → 再改」
+  # 刻意不挂进 verify：actionlint 不是每个贡献者都装了的工具，把它做成硬依赖会让
+  # 只改 Go 代码的人也无从通过校验；缺工具时给出安装指引而不是直接 command not found
+  # 用法：task verify:actions
+  verify:actions:
+    desc: '校验 GitHub Actions 工作流（按需，需 actionlint，用法: task verify:actions）'
+    cmds:
+      - |
+        set -eu
+        if ! command -v actionlint >/dev/null 2>&1; then
+          printf '缺少 actionlint：本任务用它校验 .github/workflows/*.yml\n  安装（brew）：brew install actionlint\n  安装（go）：go install github.com/rhysd/actionlint/cmd/actionlint@latest\n' >&2
+          exit 1
+        fi
+        actionlint .github/workflows/*.yml
+
+  # build-all 由共享库 eggokit 的 buildall 驱动：平台清单、产物命名与 -ldflags 注入
+  # 全部来自 release.json
+  # --package 走默认值 "."：al 的 main 包就在仓库根目录，无需显式指定
+  # --version/--build-time 仍由本仓库的 VERSION/BUILDTIME 变量注入，与原实现逐字一致
   build-all:
     desc: Build all platform binaries in parallel
-    deps:
-      - build:windows:386
-      - build:windows:amd64
-      - build:windows:arm64
-      - build:linux:386
-      - build:linux:amd64
-      - build:linux:arm
-      - build:linux:arm64
-      - build:darwin:amd64
-      - build:darwin:arm64
-      - build:freebsd:amd64
-      - build:freebsd:arm64
+    cmds:
+      - go run github.com/jy-eggroll/eggokit/release/cmd/buildall --manifest release.json --version "{{.VERSION}}" --build-time "{{.BUILDTIME}}" --out-dir build --root .
 
+  # 构建任务不声明 sources/generates，因为 VERSION 和 BUILDTIME 不参与文件时间戳判断
+  # 这样每次显式调用都会真正执行 go build，避免复用嵌入旧版本信息的二进制文件
+  # （改造前声明了这两项，第二次 task build 会输出 up to date 直接跳过，
+  # 而默认版本号是时间戳，用户拿到的是带旧时间戳的产物）
   build:
     desc: Build for current platform
     cmds:
+      - mkdir -p build
       - go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}{{exeExt}} .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}{{exeExt}}
 
-  build:windows:386:
-    desc: Cross-compile windows/386
+  # changelog 只是一层薄封装：真正的生成逻辑在共享库 eggokit 的 changelog 命令里，
+  # 与 buildall 共用同一份 release.json，因此下载表格里的平台与构建产物不会再各说各话
+  # 语言优先级由命令自己决定（--lang > 清单 releaseNotesLang > 内置默认 en）：
+  # NOTES_LANG 为空时**刻意不传 --lang**，让清单里的 releaseNotesLang(zh-CN) 生效
+  #
+  # 关于「VERSION 必填」的校验：不能写成 `if [ -z "{{.VERSION}}" ]`。VERSION 变量有
+  # 时间戳回退值，{{.VERSION}} 永远非空，那种写法是死代码，漏传时反而会拿时间戳当
+  # 版本号生成一份看起来正常、实则版本号是垃圾的发布说明（flk 与改造前的 al 都有这个
+  # 问题，实测 task changelog 不带 VERSION 会输出「未在 CHANGELOG.md 中找到
+  # 2026-10-18-22-29-36 小节」）。这里改为识别时间戳形态：命中即说明调用方没传版本号，
+  # 直接拒绝。CI 传入的是标签版本号或 dev- 时间戳，都不匹配这个形态，因此不受影响
+  changelog:
+    desc: '生成发布更新日志并输出到 stdout（用法: task changelog VERSION=x.y.z [TYPE=release|dev] [NOTES_LANG=zh-CN|en]）'
     cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-windows-386.exe .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-windows-386.exe
+      - |
+        set -e
+        case "{{.VERSION}}" in
+          [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9])
+            echo "Error: 未指定 VERSION。用法: task changelog VERSION=x.y.z（当前取到的是构建时间戳 {{.VERSION}}，不是版本号）" >&2
+            exit 1
+            ;;
+        esac
 
-  build:windows:amd64:
-    desc: Cross-compile windows/amd64
-    cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-windows-amd64.exe .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-windows-amd64.exe
+        # 用位置参数拼命令行而不是拼字符串：NOTES_LANG 为空时不会多出一个空参数 --lang，
+        # 也不会为了「能不能加引号」纠结
+        set -- --manifest release.json --version "{{.VERSION}}" --type "{{.TYPE}}" --root .
+        if [ -n "{{.NOTES_LANG}}" ]; then set -- "$@" --lang "{{.NOTES_LANG}}"; fi
 
-  build:windows:arm64:
-    desc: Cross-compile windows/arm64
-    cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-windows-arm64.exe .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-windows-arm64.exe
-
-  build:linux:386:
-    desc: Cross-compile linux/386
-    cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-linux-386 .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-linux-386
-
-  build:linux:amd64:
-    desc: Cross-compile linux/amd64
-    cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-linux-amd64 .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-linux-amd64
-
-  build:linux:arm:
-    desc: Cross-compile linux/arm (armv7)
-    cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-linux-arm .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-linux-arm
-
-  build:linux:arm64:
-    desc: Cross-compile linux/arm64
-    cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-linux-arm64 .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-linux-arm64
-
-  build:darwin:amd64:
-    desc: Cross-compile darwin/amd64
-    cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-darwin-amd64 .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-darwin-amd64
-
-  build:darwin:arm64:
-    desc: Cross-compile darwin/arm64 (Apple Silicon)
-    cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-darwin-arm64 .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-darwin-arm64
-
-  build:freebsd:amd64:
-    desc: Cross-compile freebsd/amd64
-    cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-freebsd-amd64 .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-freebsd-amd64
-
-  build:freebsd:arm64:
-    desc: Cross-compile freebsd/arm64
-    cmds:
-      - mkdir -p build
-      - CGO_ENABLED=0 GOOS=freebsd GOARCH=arm64 go build -ldflags="{{.LDFLAGS}}" -trimpath -o build/{{.APP}}-freebsd-arm64 .
-    sources:
-      - ./**/*.go
-      - ./init/*.zsh
-      - ./init/*.bash
-      - ./init/*.fish
-      - ./init/*.ps1
-      - go.mod
-      - go.sum
-    generates:
-      - build/{{.APP}}-freebsd-arm64
-
-  test:
-    desc: Run all Go tests
-    cmds:
-      - go test ./... -count=1
+        go run github.com/jy-eggroll/eggokit/release/cmd/changelog "$@"
 
   clean:
     desc: Remove all build artifacts
