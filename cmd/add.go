@@ -23,8 +23,9 @@ var addCmd = &cobra.Command{
 
 The command is stored in ~/.config/al/alias.toml.
 
-Examples:
-  al add gs "git status"              # shared across all shells
+Shell flags are optional: omit all of them and the alias goes to the
+"common" group, which every shell shares. Examples:
+  al add gs "git status"              # no shell flag → common, all shells
   al add rmrf "rm -rf" --zsh          # zsh only
   al add rmrf "Remove-Item -Recurse -Force" --powershell  # PowerShell only
   al add o "open ." --zsh --bash      # zsh and bash only
@@ -34,10 +35,9 @@ Examples:
 		name := args[0]
 		command := args[1]
 
+		// 不在这里检查 shells 是否为空：resolveShells 保证至少返回 ["common"]，
+		// 空切片分支永远不会执行，留着只会让读者以为「必须指定 shell」
 		shells := resolveShells()
-		if len(shells) == 0 {
-			return fmt.Errorf("at least one shell flag required (or use --common)")
-		}
 
 		newCfg, err := cfg.AddAlias(name, command, shells)
 		if err != nil {
@@ -54,6 +54,11 @@ Examples:
 	},
 }
 
+// resolveShells 把 add 的 shell 标志解析成别名所属的 shell 列表。
+//
+// 一个 alias 都不指定（且未给 --common）时返回 ["common"]，也就是「省略即通用」，
+// 这是 add 的默认语义。正因为这里已经兜底，调用方不必也不应再检查空列表：
+// 那个检查既不可达，又会让读代码的人误以为 shell 标志是必填的。
 func resolveShells() []string {
 	if flagCommon {
 		return []string{"common"}

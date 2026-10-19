@@ -365,3 +365,30 @@ func TestAdd_写入失败时原文件完好(t *testing.T) {
 	}
 	noTempFileLeft(t, home)
 }
+
+// TestAdd_省略shell标志时写入common 覆盖问题 2 修正后的实际行为。
+//
+// 不带任何 shell 标志执行 add，等价于 --common，别名写进 [aliases] 顶层，
+// 而不是报「必须指定 shell」。这条用例同时守住两件事：resolveShells 的兜底不能删，
+// 以及 add 的文档不能再说成 shell 标志必填。
+func TestAdd_省略shell标志时写入common(t *testing.T) {
+	home := isolatedHome(t)
+	path := writeConfig(t, home, validConfig)
+
+	out, err := run(t, "add", "zz", "echo z")
+
+	if err != nil {
+		t.Fatalf("省略 shell 标志时 add 不应报错: %v\n输出:\n%s", err, out)
+	}
+	data, readErr := os.ReadFile(path)
+	if readErr != nil {
+		t.Fatalf("读取写回后的配置失败: %v", readErr)
+	}
+	content := string(data)
+	if !strings.Contains(content, `zz = "echo z"`) {
+		t.Fatalf("省略 shell 标志的别名未写入 common 分组，配置内容:\n%s", content)
+	}
+	if strings.Contains(content, "[aliases.zz]") {
+		t.Fatalf("省略 shell 标志的别名不应写成分 shell 的对象，配置内容:\n%s", content)
+	}
+}
