@@ -366,6 +366,53 @@ func TestAdd_写入失败时原文件完好(t *testing.T) {
 	noTempFileLeft(t, home)
 }
 
+// TestSave_写盘失败时不打印Usage 覆盖「运行期错误一律不打印 usage」这条统一规则。
+//
+// 为什么专门测 Save 失败：参数用错与配置读取/解析失败此前都已有用例，
+// 唯独 Save 失败这条路径上没有管 usage，`al add` 在配置目录不可写时会先报
+// 「save config: ... permission denied」再跟一整段 Usage，与配置损坏时的干净报错不一致。
+// 修复后 usage 只在进入 PersistentPreRunE 之前（参数与标志校验）才打印，
+// 因此这里断言两件事同时成立：错误里带得上 save 失败的上下文，且输出里没有 Usage。
+//
+// 为什么同时覆盖 add 与 rm：两者是各自独立的写入入口，各写一次 Save 失败的处理，
+// 只测其中一个会放过另一个，正是原先「按失败点打补丁」漏掉杀伤力的原因。
+func TestSave_写盘失败时不打印Usage(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("以 root 运行时目录权限位不生效，无法制造写入失败")
+	}
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{"add", []string{"add", "--common", "zz", "echo z"}},
+		{"rm", []string{"rm", "gs"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			home := isolatedHome(t)
+			path := writeConfig(t, home, validConfig)
+
+			dir := filepath.Dir(path)
+			if err := os.Chmod(dir, 0o500); err != nil {
+				t.Fatalf("设置目录只读失败: %v", err)
+			}
+			t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+			out, err := run(t, c.args...)
+
+			if err == nil {
+				t.Fatalf("目录不可写时 %s 应当返回错误，实际成功", c.name)
+			}
+			if !strings.Contains(err.Error(), "save config") {
+				t.Fatalf("错误应当带上保存失败的上下文，实际: %v", err)
+			}
+			if strings.Contains(out, "Usage:") {
+				t.Fatalf("保存失败属于运行期错误，不应打印整段 usage，实际输出:\n%s", out)
+			}
+		})
+	}
+}
+
 // TestAdd_省略shell标志时写入common 覆盖问题 2 修正后的实际行为。
 //
 // 不带任何 shell 标志执行 add，等价于 --common，别名写进 [aliases] 顶层，

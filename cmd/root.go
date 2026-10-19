@@ -25,6 +25,26 @@ for the target shell.
 
 Supported shells: bash, zsh, fish, powershell`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// 进入运行阶段后一律不再打印 usage，把用法说明留给真正的参数错误。
+		//
+		// 为什么放在这里就足够了：cobra 执行一条命令的顺序是「解析标志 → 校验参数
+		// （Args）→ PersistentPreRunE → PreRunE → RunE」，参数与标志用错时，
+		// 报错发生在进入本钩子之前，此时 SilenceUsage 还是 false，cobra 照默认行为
+		// 打印整段用法——这正是用户需要看到的。而配置读取失败、解析失败、Save 失败
+		// 以及任何命令 RunE 返回的错误都发生在本钩子之后，一律只报错误本身。
+		//
+		// 由此得出一条必须遵守的约束：凡是「用户用法有错」的检查都要写在命令的
+		// Args 字段里，不能写进 RunE。写进 RunE 就等于挂在本钩子之后，会被这里
+		// 一并静默——edit 原先把「既没给新命令也没给 shell 标志」与「--common 与
+		// shell 专属标志互斥」两条检查放在 RunE 中，就是这样丢掉 usage 的。
+		// 判断标准是「用户是否需要看用法才能改对」：需要，就放 Args 这一层。
+		//
+		// 为什么集中在这里而不是在各个错误分支上分别设置：原先的写法是在每个已知的
+		// 失败点各写一次 SilenceUsage，配置读取与解析都写了，add/rm 的 Save 失败却漏了，
+		// 「同一类运行期错误两种待遇」的根源就在这——按失败点打补丁的做法必然随着
+		// 新增失败分支而再次漏掉。这里只有一处，且对本包全部子命令自动生效。
+		cmd.SilenceUsage = true
+
 		// completion 命令树整体跳过配置加载。
 		//
 		// 为什么必须连 completion 的子命令（`al completion bash` 等）一起跳过：
@@ -66,11 +86,8 @@ Supported shells: bash, zsh, fish, powershell`,
 				cfg = config.Default()
 				return nil
 			}
-			// 读不出来时一并关掉 usage 输出：这是运行期错误（配置文件的存在与权限问题），
-			// 与「命令参数用错」是两回事，后者用户确实需要看到用法。cobra 默认在 RunE
-			// 返回错误后追加整段 Usage 与 Flags，对一个「你的配置文件读不了」的错误
-			// 附上十几行参数说明只是噪声，真正的信息是上面那个带绝对路径的错误
-			cmd.SilenceUsage = true
+			// 读不出来时只报这个带绝对路径的错误，不再追加 usage：
+			// 这是运行期错误（配置文件的存在与权限问题），usage 由本函数开头统一关闭
 			return fmt.Errorf("read config file %s: %w", ConfigPath, err)
 		}
 
@@ -78,9 +95,7 @@ Supported shells: bash, zsh, fish, powershell`,
 		// 当成现有配置保存，与上面是同一个「静默清空用户数据」的后果。
 		c, err := config.Parse(data)
 		if err != nil {
-			// 与上面同一理由：关掉 usage，让用户只看到带路径与行号的解析错误。
-			// 不放在 rootCmd 的定义处统一设置，那会让参数用错时也看不到用法
-			cmd.SilenceUsage = true
+			// 与上面同一理由：让用户只看到带路径与行号的解析错误，usage 已在函数开头关闭
 			return fmt.Errorf("parse config file %s: %w", ConfigPath, err)
 		}
 		cfg = c
