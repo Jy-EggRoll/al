@@ -120,6 +120,22 @@ func isCompletionCommand(cmd *cobra.Command) bool {
 	return false
 }
 
+// commonShellConflict 检查「--common 与 shell 专属标志同时出现」这一用法错误，add 与 edit 共用。
+//
+// 为什么两个命令共用一份判断：互斥规则本是一件同一的事，两处各写一遍，日后新增 shell
+// 或放宽规则时必然只改一处，正是本项目此前 add 静默丢弃 --zsh、edit 却报错的成因。
+//
+// 为什么不用 cobra 的 MarkFlagsMutuallyExclusive：它的校验点在 cobra v1.10.2 的
+// command.go 第 1010 行 ValidateFlagGroups，位于 PersistentPreRunE 与 RunE 之间，
+// 而 root.go 的 PersistentPreRunE 一进入就打开了 SilenceUsage，互斥报错将不会附上用法说明。
+// 换句话说它不满足本项目「用法错误必须打印 usage」的约束，只能在 Args 层手写这份判断。
+func commonShellConflict(common bool, specific bool) error {
+	if common && specific {
+		return fmt.Errorf("--common cannot be combined with shell-specific flags")
+	}
+	return nil
+}
+
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

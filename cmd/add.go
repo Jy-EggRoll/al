@@ -30,7 +30,15 @@ Shell flags are optional: omit all of them and the alias goes to the
   al add rmrf "Remove-Item -Recurse -Force" --powershell  # PowerShell only
   al add o "open ." --zsh --bash      # zsh and bash only
 `,
-	Args: cobra.ExactArgs(2),
+	// 位置参数与标志组合都在 Args 层校验：互斥检查放在这里，`al add x y --common --zsh`
+	// 才会明确报错，而不是像此前那样静默把 --zsh 丢掉改写成通用别名。
+	// 为什么必须在 Args 而不是 RunE，见 root.go 的 commonShellConflict。
+	Args: func(cmd *cobra.Command, args []string) error {
+		if err := cobra.ExactArgs(2)(cmd, args); err != nil {
+			return err
+		}
+		return commonShellConflict(flagCommon, flagZsh || flagBash || flagFish || flagPowershell)
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		command := args[1]

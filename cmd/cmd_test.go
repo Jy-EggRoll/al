@@ -439,3 +439,113 @@ func TestAdd_省略shell标志时写入common(t *testing.T) {
 		t.Fatalf("省略 shell 标志的别名不应写成分 shell 的对象，配置内容:\n%s", content)
 	}
 }
+
+// TestEdit_标志组合用错时打印Usage 覆盖「用法错误只能写在 Args 层」这条约束。
+//
+// 为什么单独测 edit：edit 有两条「用法用错」的校验（既没给新命令也没给 shell 标志、
+// --common 与 shell 专属标志互斥），它们原先写在 RunE 内部，位置在 root.go 打开
+// SilenceUsage 之后，因此被一并静默——错误照报，用法说明却没了，而 main 上是有 usage 的，
+// 属于统一静默时引入的回归。搬到 Args 字段后，报错发生在 PersistentPreRunE 之前，
+// usage 才回得来。这条用例同时守住「以后新增用法校验不要写进 RunE」。
+func TestEdit_标志组合用错时打印Usage(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{"既没给新命令也没给shell标志", []string{"edit", "gs"}},
+		{"common与shell专属标志互斥", []string{"edit", "gs", "--common", "--zsh"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			home := isolatedHome(t)
+			writeConfig(t, home, validConfig)
+
+			out, err := run(t, c.args...)
+
+			if err == nil {
+				t.Fatalf("%v 属于用法用错，应当返回错误，实际成功，输出:\n%s", c.args, out)
+			}
+			if !strings.Contains(out, "Usage:") {
+				t.Fatalf("用法用错时应当打印 usage，实际输出:\n%s", out)
+			}
+		})
+	}
+}
+
+// TestAdd_common与shell标志互斥时打印Usage 覆盖「add 与 edit 对同一标志组合口径一致」。
+//
+// 为什么要有这条：修复前 `al add x y --common --zsh` 退出码为 0，resolveShells 只认
+// flagCommon 就直接返回 ["common"]，--zsh 被静默丢弃、别名被写成通用，用户完全看不出；
+// 而 edit 对同一组合是明确报错的。表里同时放了合法组合，防止互斥校验写宽了，
+// 把「多个 shell 标志并存」这种正当用法也当成冲突。
+func TestAdd_common与shell标志互斥时打印Usage(t *testing.T) {
+	cases := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{"common与zsh互斥", []string{"add", "x", "y", "--common", "--zsh"}, true},
+		{"common与多个shell标志互斥", []string{"add", "x", "y", "--common", "--zsh", "--bash"}, true},
+		{"仅给common合法", []string{"add", "x", "y", "--common"}, false},
+		{"多个shell标志合法", []string{"add", "x", "y", "--zsh", "--bash"}, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			home := isolatedHome(t)
+			path := writeConfig(t, home, validConfig)
+
+			out, err := run(t, c.args...)
+
+			if c.wantErr {
+				if err == nil {
+					t.Fatalf("%v 应当返回错误，实际成功，输出:\n%s", c.args, out)
+				}
+				if !strings.Contains(err.Error(), "cannot be combined") {
+					t.Fatalf("错误应当说明标志互斥，实际: %v", err)
+				}
+				if !strings.Contains(out, "Usage:") {
+					t.Fatalf("标志组合用错时应当打印 usage，实际输出:\n%s", out)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("%v 是合法组合，不应报错: %v\n输出:\n%s", c.args, err, out)
+			}
+			if strings.Contains(out, "Usage:") {
+				t.Fatalf("合法组合不应打印 usage，实际输出:\n%s", out)
+			}
+			// 「多个 shell 标志合法」这一类要确认两个 shell 都真的写进去了：
+			// 只断言没报错的话，把 --bash 丢掉的回归依然能蒙混过关。
+			if strings.Contains(strings.Join(c.args, " "), "--zsh") {
+				data, readErr := os.ReadFile(path)
+				if readErr != nil {
+					t.Fatalf("读取写回后的配置失败: %v", readErr)
+				}
+				content := string(data)
+				for _, want := range []string{"zsh", "bash"} {
+					if strings.Contains(strings.Join(c.args, " "), "--"+want) && !strings.Contains(content, want) {
+						t.Fatalf("配置里缺少 %s 作用域，被静默丢掉，配置内容:\n%s", want, content)
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestVersion_多余参数静默忽略 固定一条有意为之的行为：version 不校验位置参数。
+//
+// 为什么反过来守住「不报错」：兄弟项目 ggt 与 flk 的 version 同样静默忽略多余参数，
+// 三者口径一致是用户的决定。这条用例的作用是让日后把 Args 校验补回来的改动立刻暴露出来，
+// 而不是让它在无人察觉时改变用户可见的行为。
+// 这里不校验输出版本号：version.go 用 fmt.Printf 直接写进程 stdout，不走 cobra 的
+// writer，测试的缓冲抓不到，真正的输出在进程级验证里核对，避免为此改动用输出通道。
+func TestVersion_多余参数静默忽略(t *testing.T) {
+	home := isolatedHome(t)
+	writeConfig(t, home, validConfig)
+
+	for _, args := range [][]string{{"version"}, {"version", "extra"}} {
+		if _, err := run(t, args...); err != nil {
+			t.Fatalf("%v 应当静默成功（与 ggt、flk 的 version 一致）: %v", args, err)
+		}
+	}
+}
