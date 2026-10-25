@@ -532,15 +532,21 @@ func TestAdd_common与shell标志互斥时打印Usage(t *testing.T) {
 // 为什么反过来守住「不报错」：兄弟项目 ggt 与 flk 的 version 同样静默忽略多余参数，
 // 三者口径一致是用户的决定。这条用例的作用是让日后把 Args 校验补回来的改动立刻暴露出来，
 // 而不是让它在无人察觉时改变用户可见的行为。
-// 这里不校验输出版本号：version.go 用 fmt.Printf 直接写进程 stdout，不走 cobra 的
-// writer，测试的缓冲抓不到，真正的输出在进程级验证里核对，避免为此改动用输出通道。
+// 输出走 cobra 的 OutOrStdout()（共享实现 ui.NewVersionCommand 的约定），因此 run 的
+// 缓冲能抓到全部文本；这里顺带固定三行结构与 ver 别名，避免共享实现升级时静默改变格式。
 func TestVersion_多余参数静默忽略(t *testing.T) {
 	home := isolatedHome(t)
 	writeConfig(t, home, validConfig)
 
-	for _, args := range [][]string{{"version"}, {"version", "extra"}} {
-		if _, err := run(t, args...); err != nil {
+	for _, args := range [][]string{{"version"}, {"version", "extra"}, {"ver"}} {
+		out, err := run(t, args...)
+		if err != nil {
 			t.Fatalf("%v 应当静默成功（与 ggt、flk 的 version 一致）: %v", args, err)
+		}
+		for _, want := range []string{"Version:", "Build time:", "Platform:"} {
+			if !strings.Contains(out, want) {
+				t.Fatalf("%v 的输出缺少 %q 一行，实际输出:\n%s", args, want, out)
+			}
 		}
 	}
 }

@@ -31,7 +31,7 @@
   "Show and edit al's interface preferences.\n\nThe preferences live in ~/.config/al/config.toml, separate from the aliases in\nalias.toml so that adding or removing an alias never touches them.\n\nExamples:\n  al config get language          Print the language in effect\n  al config set language zh-CN    Write the language preference": "查看与修改 al 的界面偏好。\n\n偏好保存在 ~/.config/al/config.toml，与存放别名的 alias.toml 分开，因此增删别名不会改动偏好。\n\n例如：\n  al config get language          打印当前生效的语言\n  al config set language zh-CN    写入语言偏好",
   "Show and edit interface preferences": "查看与修改界面偏好",
   "Show details of a specific alias": "显示某个别名的详情",
-  "Show version information": "显示版本信息",
+  "Skip the confirmation prompt (required in non-interactive environments)": "跳过确认提示（非交互环境必须使用）",
   "Source: {{.Path}}": "来源：{{.Path}}",
   "Type: {{.Type}}": "类型：{{.Type}}",
   "Unsupported shell {{.Shell}}: choose one of bash, zsh, fish, powershell": "不支持的 shell {{.Shell}}，可选值为 bash、zsh、fish、powershell",

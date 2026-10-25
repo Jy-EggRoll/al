@@ -8,6 +8,7 @@ import (
 	"github.com/jy-eggroll/al/config"
 	"github.com/jy-eggroll/al/internal/locales"
 	"github.com/jy-eggroll/eggokit/l10n"
+	"github.com/jy-eggroll/eggokit/updater"
 
 	"github.com/spf13/cobra"
 )
@@ -154,12 +155,22 @@ func commonShellConflict(common bool, specific bool) error {
 
 // Execute 是程序的入口，由 main.go 调用。
 //
-// 三步顺序是有意为之，不能调换：
-//  1. 先确定并加载语言。cobra 的 --help 路径不会执行 PersistentPreRunE，而命令描述
+// 以下顺序是有意为之，不能调换：
+//  1. 先清理上一次升级留下的文件。它与语言、命令树都无关，也不该被后面的提前返回跳过
+//  2. 再确定并加载语言。cobra 的 --help 路径不会执行 PersistentPreRunE，而命令描述
 //     在构造时就要用到，所以语言解析必须走在最前面
-//  2. 再构造命令树。各命令的构造函数会调用 T()，此时语言已就绪
-//  3. 最后才交给 cobra 解析参数并执行
+//  3. 接着构造命令树。各命令的构造函数会调用 T()，此时语言已就绪
+//  4. 最后才交给 cobra 解析参数并执行
 func Execute() {
+	// 为什么清理只能等到「下一次运行」：升级成功的那一刻，旧版本正是当前进程自己的映像，
+	// 正在运行的进程删不掉自己的映像，只能由下一次运行（旧进程已退出）来收拾。
+	//
+	// 失败一律忽略，也不打印任何东西：清理受阻（文件仍被占用、安装目录只读）不该影响这次
+	// 正常使用，用户也不需要看到一条与自己无关的启动提示；清不掉的文件会在下次运行再试。
+	if execPath, err := os.Executable(); err == nil {
+		updater.CleanupLeftovers(execPath)
+	}
+
 	// 语言文件是 //go:embed 进 locales 包的，加载失败属于构建期错误，必须显式暴露。
 	// 静默降级只会表现为「界面语言不对」，没有任何报错，极难排查
 	if err := l10n.Init(chooseLanguage(), locales.Options()); err != nil {

@@ -132,7 +132,7 @@ function global:cls {
 	}
 }
 
-// TestFishFunc_emptyValue 钉住空值与全空白值不再 panic。
+// TestFishFunc_emptyValue 固定空值与全空白值不再 panic。
 // 背景：strings.Fields("") 返回空切片，取 [0] 会 index out of range，
 // 把 al init fish 整个流程炸掉。空值理论上被 config 层拒绝，
 // 但 TOML 可手写成 m = [] 绕过写入校验，所以生成器必须自己扛住。

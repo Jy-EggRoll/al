@@ -38,6 +38,22 @@ al edit cdf --fish
 go install github.com/jy-eggroll/al@latest
 ```
 
+## 升级
+
+`al` 自带升级命令，装好之后不必再回到 `go install`：
+
+```bash
+al upgrade              # 检查新版本，确认后下载并替换当前二进制
+al upgrade --check      # 只检查并报告是否有新版本，不下载、不替换
+al upgrade --yes        # 跳过确认，适合脚本与 CI
+```
+
+升级完成后重新打开终端，或直接再运行一次 `al`，就会用上新版本。当前版本比远端新、或已经是最新时，命令只报告结论，不做任何改动。
+
+默认只跟进正式版本。想提前试用开发版与滚动预发布，分别加 `--dev` 与 `--alpha`，两者不能同时给出。`--force` 与 `--yes` 都跳过升级前的确认，区别在范围：`--yes` 连下载受阻时「是否改用代理」的询问也一并同意，`--force` 只跳过升级确认这一步。
+
+直连 GitHub 超时或失败时，命令会询问是否改用代理 `https://gh-proxy.org/` 下载。是否换源由你决定，程序不会自行切换：换源后下载到的二进制来自该镜像，而它随后会被替换成你正在使用的可执行文件，因此这条确认值得看清再答。
+
 ## 初始化
 
 每种 Shell 对应一条初始化命令，加到对应 Shell 的启动配置中（`.zshrc`、`.bashrc`、`config.fish`，或 PowerShell 的 `$PROFILE`）：
@@ -142,6 +158,26 @@ fish = "eza --git --icons=auto --all"
 `al add`、`al edit`、`al rm` 会改写这个文件，手动编辑别名本身同样有效。但需要注意：`al` 写回时会用内存中的配置重新生成整个文件，**除别名之外的内容都会被静默丢弃**——不只是手写的注释与空行，自定义区块（例如 `[my-custom-section]`）及其中的键值同样保不住。因此建议把注释写在这个文件之外（例如 dotfiles 仓库的 README），也不要在这里放 `al` 不认识的内容，文件本身只放别名。
 
 把它放进 dotfiles 仓库后，新机器 clone 下来即可同步全部别名。
+
+## 语言
+
+界面语言支持英文与简体中文，默认英文。临时切换用全局参数 `--lang`（简写 `-l`），写在命令行的什么位置都可以：
+
+```bash
+al -l zh-CN ls          # 这次以中文输出
+al ls --lang zh-CN      # 与上一行等价
+```
+
+要长期使用中文，把偏好写进配置文件：
+
+```bash
+al config set language zh-CN    # 写入 ~/.config/al/config.toml，下次运行生效
+al config get language          # 查看当前生效的语言
+```
+
+偏好保存在 `~/.config/al/config.toml`，与存放别名的 `alias.toml` 分开，因此改语言不会碰到别名，别名文件损坏时也能照常修改语言。
+
+界面语言影响命令帮助、提示与错误信息，以及 `al version` 的标签文字。别名内容本身不会被翻译——它们是你要交给 Shell 执行的命令。
 
 ## 构建
 

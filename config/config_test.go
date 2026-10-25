@@ -364,7 +364,7 @@ func TestValidateAliasName_legal(t *testing.T) {
 	}
 }
 
-// TestValidateAliasName_rejected 逐个钉住拒绝规则。
+// TestValidateAliasName_rejected 逐个固定拒绝规则。
 // 每一项都对应一种具体的失效方式，不是罗列字符。
 func TestValidateAliasName_rejected(t *testing.T) {
 	cases := []struct {
@@ -406,7 +406,7 @@ func TestValidateAliasName_rejected(t *testing.T) {
 	}
 }
 
-// TestValidateAliasCommand_empty 钉住空命令与全空白命令都被拒绝。
+// TestValidateAliasCommand_empty 固定空命令与全空白命令都被拒绝。
 // 全空白必须单独覆盖：它与空串一样会让 strings.Fields 返回空切片，
 // 只判断 == "" 会漏掉它，而漏掉的后果是 al init fish 直接 panic。
 func TestValidateAliasCommand_empty(t *testing.T) {

@@ -31,3 +31,6 @@ tool (
 	github.com/jy-eggroll/eggokit/release/cmd/buildall
 	github.com/jy-eggroll/eggokit/release/cmd/changelog
 )
+
+// 临时：eggokit ui 包尚未发布，集成时改为正式版本
+replace github.com/jy-eggroll/eggokit => /home/eggroll/GitRepo/eggokit

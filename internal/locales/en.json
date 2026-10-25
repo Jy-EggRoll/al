@@ -31,7 +31,7 @@
   "Show and edit al's interface preferences.\n\nThe preferences live in ~/.config/al/config.toml, separate from the aliases in\nalias.toml so that adding or removing an alias never touches them.\n\nExamples:\n  al config get language          Print the language in effect\n  al config set language zh-CN    Write the language preference": "Show and edit al's interface preferences.\n\nThe preferences live in ~/.config/al/config.toml, separate from the aliases in\nalias.toml so that adding or removing an alias never touches them.\n\nExamples:\n  al config get language          Print the language in effect\n  al config set language zh-CN    Write the language preference",
   "Show and edit interface preferences": "Show and edit interface preferences",
   "Show details of a specific alias": "Show details of a specific alias",
-  "Show version information": "Show version information",
+  "Skip the confirmation prompt (required in non-interactive environments)": "Skip the confirmation prompt (required in non-interactive environments)",
   "Source: {{.Path}}": "Source: {{.Path}}",
   "Type: {{.Type}}": "Type: {{.Type}}",
   "Unsupported shell {{.Shell}}: choose one of bash, zsh, fish, powershell": "Unsupported shell {{.Shell}}: choose one of bash, zsh, fish, powershell",
