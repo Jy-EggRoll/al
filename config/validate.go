@@ -1,8 +1,11 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/jy-eggroll/eggokit/l10n"
 )
 
 // aliasNameAllowedRunes 是别名名的字符白名单。
@@ -37,7 +40,7 @@ import (
 //   - zsh 本机未安装，无法实测。上面关于 zsh 的判断是依据其公开文档语法的推断，不是实测结论。
 //     正因如此，这里选择了比 bash 更窄的集合：宁可错杀，不可放过。
 //     后续若在装有 zsh 的机器上逐字符实测，可以按实测结果放宽白名单，
-//     届时应当同步补充一条测试，把「放宽的那个字符」钉住，防止回归。
+//     届时应当同步补充一条测试，把「放宽的那个字符」固定下来，防止回归。
 //   - 非 ASCII 字符（含中文）一律拒绝：bash 与 fish 对 UTF-8 别名名是宽容的，
 //     但四种 Shell 的交互补全、历史展开、终端渲染对多字节字符的处理并不一致，
 //     同样属于未实测区间。若用户确实需要中文别名名，需要先在四种 Shell 里实测后再放开。
@@ -64,20 +67,20 @@ const aliasNameAllowedRunes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVW
 //   - 白名单之外的字符：见 aliasNameAllowedRunes 上方关于「为什么取交集」的完整论证。
 func ValidateAliasName(name string) error {
 	if name == "" {
-		return fmt.Errorf("alias name is empty: a name must contain at least one character")
+		return errors.New(l10n.T("alias name is empty: a name must contain at least one character", nil))
 	}
 	if strings.TrimSpace(name) != name {
-		return fmt.Errorf("alias name %q must not start or end with whitespace: whitespace is a shell word boundary and would split the generated alias into several commands", name)
+		return fmt.Errorf("%s", l10n.T("alias name {{.Name}} must not start or end with whitespace: whitespace is a shell word boundary and would split the generated alias into several commands", map[string]any{"Name": name}))
 	}
 	if name[0] == '-' {
-		return fmt.Errorf("alias name %q must not start with '-': a leading dash is parsed as a command-line option, not as a positional argument", name)
+		return fmt.Errorf("%s", l10n.T("alias name {{.Name}} must not start with '-': a leading dash is parsed as a command-line option, not as a positional argument", map[string]any{"Name": name}))
 	}
 	if isAllDigits(name) {
-		return fmt.Errorf("alias name %q must not be pure digits: every shell reads a bare number as a numeric literal or an exit code, never as a name", name)
+		return fmt.Errorf("%s", l10n.T("alias name {{.Name}} must not be pure digits: every shell reads a bare number as a numeric literal or an exit code, never as a name", map[string]any{"Name": name}))
 	}
 	for _, r := range name {
 		if !strings.ContainsRune(aliasNameAllowedRunes, r) {
-			return fmt.Errorf("alias name %q contains illegal character %q: allowed characters are ASCII letters, digits, '_', '.' and '-' (not as the first character); the allowed set is the conservative intersection of bash, zsh, fish and powershell, because each shell rejects or reinterprets a different set of characters", name, r)
+			return fmt.Errorf("%s", l10n.T("alias name {{.Name}} contains illegal character '{{.Char}}': allowed characters are ASCII letters, digits, '_', '.' and '-' (not as the first character); the allowed set is the conservative intersection of bash, zsh, fish and powershell, because each shell rejects or reinterprets a different set of characters", map[string]any{"Name": name, "Char": string(r)}))
 		}
 	}
 	return nil
@@ -95,7 +98,7 @@ func ValidateAliasName(name string) error {
 // 空切片，与空串一样触发 panic，必须一并拒绝。
 func ValidateAliasCommand(command string) error {
 	if strings.TrimSpace(command) == "" {
-		return fmt.Errorf("alias command is empty or whitespace-only: an empty command produces a fish/powershell function with no body and crashes the generators, so it is rejected at write time")
+		return errors.New(l10n.T("alias command is empty or whitespace-only: an empty command produces a fish/powershell function with no body and crashes the generators, so it is rejected at write time", nil))
 	}
 	return nil
 }

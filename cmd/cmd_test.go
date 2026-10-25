@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/jy-eggroll/al/config"
-
-	"github.com/spf13/cobra"
+	"github.com/jy-eggroll/al/internal/locales"
+	"github.com/jy-eggroll/eggokit/l10n"
 
 	"github.com/pterm/pterm"
 )
@@ -27,35 +27,26 @@ import (
 // OutOrStderr()；真实终端里这两者都是同一个 tty，无法区分，测试里若不合并观察，
 // 就可能因为「Usage 出现在另一个流」而漏判。
 
-// resetCmdState 把包级全局状态复位。
+// TestMain 把测试语言固定为英文。
 //
-// 为什么需要它：flag 变量与 rootCmd 都是包级单例，flag 值在多次 rootCmd.Execute() 之间
-// 不会自动回到默认值（cobra 的 ParseFlags 只写入不重置），而 rootCmd.SilenceUsage 会被
-// root.go 在配置失败时置为 true 并一直保留。真实进程每次只执行一条命令，不存在这类污染；
-// 但同一个测试进程里连续跑多条命令时，上一个用例的 flag 与 SilenceUsage 会串到下一个用例，
-// 让「参数用错是否打印 usage」这类断言得出与真实行为相反的错误结论。
-func resetCmdState() {
-	flagCommon, flagZsh, flagBash, flagFish, flagPowershell, flagForce = false, false, false, false, false, false
-	flagEditCommon, flagEditZsh, flagEditBash, flagEditFish, flagEditPowershell = false, false, false, false, false
-	lsAll, lsZsh, lsBash, lsFish, lsPwsh = false, false, false, false, false
-	resetSilenceUsage(rootCmd)
-	rootCmd.SetArgs(nil)
-	cfg = config.Default()
-	ConfigPath = ""
+// 为什么必须显式固定：语言默认取自配置文件与环境，而测试要断言英文短语（如 "Usage:"、
+// "illegal character"）。不固定的话，在设置了中文偏好的机器上跑测试会得到与预期相反的
+// 结论，且失败信息会指向完全无关的代码。
+func TestMain(m *testing.M) {
+	if err := l10n.Init("en", locales.Options()); err != nil {
+		panic(err)
+	}
+	os.Exit(m.Run())
 }
 
-// resetSilenceUsage 递归复位整棵命令树的 usage/error 沉默开关。
+// resetCmdState 把包级全局状态复位。
 //
-// 为什么不能只复位 rootCmd：root.go 的 PersistentPreRunE 拿到的是「正在执行的子命令」，
-// 它把 SilenceUsage 置在 addCmd 这类叶子命令上，此后整个进程内都会保持为 true。
-// 真实使用中每条命令都是一个新进程，所以线上看不出问题；但同一个测试进程里连续跑多条命令时，
-// 前一个用例留下的 true 会让后一个用例的 usage 断言凭空失败（第一轮实测就踩到了这一点）。
-func resetSilenceUsage(c *cobra.Command) {
-	c.SilenceUsage = false
-	c.SilenceErrors = false
-	for _, sub := range c.Commands() {
-		resetSilenceUsage(sub)
-	}
+// 为什么需要它：flag 变量是包级单例，而命令树现在是每次运行时重新构造的（见 registry.go），
+// pflag 注册时会写入默认值，因此 SilenceUsage 之类挂在命令上的状态不再需要手工复位；
+// 但写进 cfg 与 ConfigPath 的值仍会留到下一个用例，必须清掉。
+func resetCmdState() {
+	cfg = config.Default()
+	ConfigPath = ""
 }
 
 // isolatedHome 返回一个隔离的家目录，并把它设为当前进程的 HOME。
@@ -99,20 +90,24 @@ func digest(t *testing.T, path string) string {
 
 // run 执行一次 al 命令，返回 stdout+stderr 的合并文本与 cobra 返回的错误。
 // 不调用 Execute()：Execute() 内部遇到错误会 os.Exit(1)，会把整个测试进程带走。
+//
+// 每条命令构造一棵新的命令树，与真实进程「一次运行一棵树」一致；
+// 也因此不存在上一次运行残留的 SilenceUsage 之类的状态污染。
 func run(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 	resetCmdState()
 
+	root := buildRoot()
 	var out bytes.Buffer
-	rootCmd.SetOut(&out)
-	rootCmd.SetErr(&out)
-	rootCmd.SetArgs(args)
+	root.SetOut(&out)
+	root.SetErr(&out)
+	root.SetArgs(args)
 	// pterm 自己持有输出目标，不经 cobra 的 writer，必须单独接管，
 	// 否则 add/ls/show 的正常输出会直接打到测试进程的终端上，断言看不见。
 	pterm.SetDefaultOutput(&out)
 	pterm.DisableColor()
 
-	err := rootCmd.Execute()
+	err := root.Execute()
 	return out.String(), err
 }
 
@@ -416,7 +411,7 @@ func TestSave_写盘失败时不打印Usage(t *testing.T) {
 // TestAdd_省略shell标志时写入common 覆盖问题 2 修正后的实际行为。
 //
 // 不带任何 shell 标志执行 add，等价于 --common，别名写进 [aliases] 顶层，
-// 而不是报「必须指定 shell」。这条用例同时守住两件事：resolveShells 的兜底不能删，
+// 而不是报「必须指定 shell」。这条用例同时守住两件事：resolveShells 的空列表处理不能删，
 // 以及 add 的文档不能再说成 shell 标志必填。
 func TestAdd_省略shell标志时写入common(t *testing.T) {
 	home := isolatedHome(t)

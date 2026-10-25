@@ -2,11 +2,13 @@ package config
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/jy-eggroll/eggokit/atomicfile"
+	"github.com/jy-eggroll/eggokit/l10n"
 )
 
 type AliasConfig struct {
@@ -43,7 +45,7 @@ func Parse(data []byte) (AliasConfig, error) {
 		Aliases map[string]interface{} `toml:"aliases"`
 	}
 	if err := toml.Unmarshal(data, &raw); err != nil {
-		return Default(), fmt.Errorf("toml parse error: %w", err)
+		return Default(), fmt.Errorf("%s: %w", l10n.T("toml parse error", nil), err)
 	}
 
 	cfg := Default()
@@ -55,7 +57,7 @@ func Parse(data []byte) (AliasConfig, error) {
 		}
 		av, err := toAliasValue(val)
 		if err != nil {
-			return Default(), fmt.Errorf("alias %q: %w", key, err)
+			return Default(), fmt.Errorf("%s: %w", l10n.T("alias {{.Name}}", map[string]any{"Name": key}), err)
 		}
 		cfg.Aliases[key] = av
 	}
@@ -71,7 +73,7 @@ func toAliasValue(val interface{}) (AliasValue, error) {
 		for i, item := range v {
 			s, ok := item.(string)
 			if !ok {
-				return AliasValue{}, fmt.Errorf("array element %d is not a string", i)
+				return AliasValue{}, fmt.Errorf("%s", l10n.T("array element {{.Index}} is not a string", map[string]any{"Index": i}))
 			}
 			multi[i] = s
 		}
@@ -87,18 +89,18 @@ func toAliasValue(val interface{}) (AliasValue, error) {
 				for i, e := range item {
 					s, ok := e.(string)
 					if !ok {
-						return AliasValue{}, fmt.Errorf("array element %d for %q is not a string", i, k)
+						return AliasValue{}, fmt.Errorf("%s", l10n.T("array element {{.Index}} for {{.Key}} is not a string", map[string]any{"Index": i, "Key": k}))
 					}
 					multi[i] = s
 				}
 				obj[k] = AliasObjectValue{Multi: multi}
 			default:
-				return AliasValue{}, fmt.Errorf("unsupported value type for key %q", k)
+				return AliasValue{}, fmt.Errorf("%s", l10n.T("unsupported value type for key {{.Key}}", map[string]any{"Key": k}))
 			}
 		}
 		return AliasValue{Object: obj}, nil
 	default:
-		return AliasValue{}, fmt.Errorf("unsupported value type")
+		return AliasValue{}, errors.New(l10n.T("unsupported value type", nil))
 	}
 }
 
@@ -177,13 +179,13 @@ func (c AliasConfig) AddAlias(name, command string, shells []string) (AliasConfi
 
 	// Type conflict checks
 	if existing.Multi != nil {
-		return c, fmt.Errorf("alias %q is a multi-type, cannot overwrite", name)
+		return c, fmt.Errorf("%s", l10n.T("alias {{.Name}} is a multi-type; it cannot be overwritten", map[string]any{"Name": name}))
 	}
 	if isShared && existing.Object != nil {
-		return c, fmt.Errorf("alias %q already has shell-specific values — run 'al rm %s' first", name, name)
+		return c, fmt.Errorf("%s", l10n.T("alias {{.Name}} already has shell-specific values; run \"al rm {{.Name}}\" first", map[string]any{"Name": name}))
 	}
 	if !isShared && existing.Inline != "" {
-		return c, fmt.Errorf("alias %q is shared across all shells — run 'al rm %s' first", name, name)
+		return c, fmt.Errorf("%s", l10n.T("alias {{.Name}} is shared across all shells; run \"al rm {{.Name}}\" first", map[string]any{"Name": name}))
 	}
 
 	// Safe overwrite
@@ -215,11 +217,11 @@ func (c AliasConfig) EditAlias(name string, command *string, shells []string) (A
 
 	existing, ok := c.Aliases[name]
 	if !ok {
-		return c, fmt.Errorf("alias %q not found", name)
+		return c, fmt.Errorf("%s", l10n.T("alias {{.Name}} not found", map[string]any{"Name": name}))
 	}
 
 	if command == nil && shells == nil {
-		return c, fmt.Errorf("nothing to change for alias %q", name)
+		return c, fmt.Errorf("%s", l10n.T("nothing to change for alias {{.Name}}", map[string]any{"Name": name}))
 	}
 
 	// Resolve effective command
@@ -262,7 +264,7 @@ func (c AliasConfig) EditAlias(name string, command *string, shells []string) (A
 	} else {
 		switch {
 		case existing.Multi != nil:
-			return c, fmt.Errorf("alias %q is a multi-type, edit the TOML file directly", name)
+			return c, fmt.Errorf("%s", l10n.T("alias {{.Name}} is a multi-type; edit the TOML file directly", map[string]any{"Name": name}))
 		case existing.Inline != "":
 			c.Aliases[name] = AliasValue{Inline: cmd}
 		case existing.Object != nil:
@@ -280,7 +282,7 @@ func (c AliasConfig) EditAlias(name string, command *string, shells []string) (A
 // RemoveAlias deletes an alias by name.
 func (c AliasConfig) RemoveAlias(name string) (AliasConfig, error) {
 	if _, ok := c.Aliases[name]; !ok {
-		return c, fmt.Errorf("alias %q not found", name)
+		return c, fmt.Errorf("%s", l10n.T("alias {{.Name}} not found", map[string]any{"Name": name}))
 	}
 	delete(c.Aliases, name)
 	return c, nil
@@ -329,13 +331,13 @@ func (c AliasConfig) Save(path string) error {
 	// 这是「编码失败不破坏原文件」的关键前提。
 	var buf bytes.Buffer
 	if err := toml.NewEncoder(&buf).Encode(map[string]interface{}{"aliases": flat}); err != nil {
-		return fmt.Errorf("encode toml: %w", err)
+		return fmt.Errorf("%s: %w", l10n.T("encode toml", nil), err)
 	}
 
 	// atomicfile.Write 内部会按需创建父目录，因此这里不需要（也不应该）提前 MkdirAll：
 	// 提前建目录会让只读命令也在用户机器上留下空目录。
 	if err := atomicfile.Write(path, buf.Bytes()); err != nil {
-		return fmt.Errorf("write config: %w", err)
+		return fmt.Errorf("%s: %w", l10n.T("write config", nil), err)
 	}
 	return nil
 }

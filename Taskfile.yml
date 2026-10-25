@@ -23,6 +23,13 @@ vars:
   # 可复用工作流是以 CLI 变量（task changelog NOTES_LANG=...）传入的，CLI 变量优先级更高
   NOTES_LANG:
     sh: printf '%s' "${NOTES_LANG:-}"
+  # l10n 工具的四个位置参数：消息函数所在包、扫描目录、语言文件目录
+  # --pkg 指向共享库 eggokit 的 l10n 包，源码里仍写同一个 T(...)
+  # 扫描范围要覆盖全部会写文案的包：cmd 是命令层，config 与 init 在仓库根目录下
+  # 也各有面向用户的错误信息，internal 只含 internal/locales
+  # 与 internal/locales/locales.go 里的语言列表是一对，改动时要一起看
+  # al 没有 HTML 页面，因此不传 --html
+  L10N_ARGS: '--pkg github.com/jy-eggroll/eggokit/l10n --src cmd,config,init,internal --dir internal/locales'
   # LDFLAGS 只服务 build 与 verify 之外的本地单平台构建；多平台构建由 buildall 自行拼装
   LDFLAGS: '-s -w -X github.com/jy-eggroll/al/cmd.Version={{.VERSION}} -X github.com/jy-eggroll/al/cmd.BuildTime={{.BUILDTIME}}'
 
@@ -101,12 +108,28 @@ tasks:
     desc: Run all verification checks
     # 验证项顺序执行，保证失败时立即停止且日志归属清晰
     # 依赖整理排在最前：go.mod/go.sum 与源码不一致时，后续检查的结论都不可信
+    # l10n:check 排在编译与测试之前：语言文件与源码不一致时，后面两项的结论都不可信
     cmds:
       - task: mod-tidy:check
       - task: fmt:check
       - task: vet
+      - task: l10n:check
       - task: test
       - task: test:race
+
+  # l10n:check 是语言文件的只读门禁：校验 en.json 与源码一致、语言文件已按字典序
+  # 排列且能被 go-i18n 正常解析、译文没有失效条目。消息 id 即英文源串，详见 eggokit/l10n
+  l10n:check:
+    desc: 校验语言文件（与源码一致、已排序、可被 go-i18n 解析）
+    cmds:
+      - go run github.com/jy-eggroll/eggokit/l10n/cmd/l10n check {{.L10N_ARGS}}
+
+  # l10n:export 是 l10n:check 的修复动作：重新生成 en.json、重排译文文件，
+  # 并打印待翻译清单与尚未迁移的存量中文文案
+  l10n:export:
+    desc: 重新生成语言文件（覆盖 en.json、重排译文、打印待翻译与待迁移清单）
+    cmds:
+      - go run github.com/jy-eggroll/eggokit/l10n/cmd/l10n export {{.L10N_ARGS}}
 
   # verify:actions 是工作流层的按需验收：actionlint 能拦住 YAML 语法错误、未定义的
   # inputs/secrets、非法的事件与权限写法等——这些错在 CI 上要等到工作流被真正触发才暴露，

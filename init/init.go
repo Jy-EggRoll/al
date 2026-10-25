@@ -5,11 +5,12 @@ import (
 	"os"
 
 	"github.com/jy-eggroll/al/config"
+	"github.com/jy-eggroll/eggokit/l10n"
 )
 
 func Run(cfg config.AliasConfig, args ...string) {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "Usage: al init <shell>")
+		fmt.Fprintln(os.Stderr, l10n.T("Usage: al init <shell>", nil))
 		os.Exit(1)
 	}
 
@@ -24,7 +25,7 @@ func Run(cfg config.AliasConfig, args ...string) {
 	case "powershell":
 		pwsh(cfg)
 	default:
-		fmt.Fprintf(os.Stderr, "Unsupported shell: %s\n", shell)
+		fmt.Fprintln(os.Stderr, l10n.T("Unsupported shell {{.Shell}}: choose one of bash, zsh, fish, powershell", map[string]any{"Shell": shell}))
 		os.Exit(1)
 	}
 }
