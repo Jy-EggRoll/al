@@ -4,7 +4,7 @@ go 1.26.3
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/jy-eggroll/eggokit v0.4.3
+	github.com/jy-eggroll/eggokit v0.7.0
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
@@ -31,6 +31,3 @@ tool (
 	github.com/jy-eggroll/eggokit/release/cmd/buildall
 	github.com/jy-eggroll/eggokit/release/cmd/changelog
 )
-
-// 临时：eggokit ui 包尚未发布，集成时改为正式版本
-replace github.com/jy-eggroll/eggokit => /home/eggroll/GitRepo/eggokit
