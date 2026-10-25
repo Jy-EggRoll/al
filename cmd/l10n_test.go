@@ -112,6 +112,24 @@ func TestConfigSetLanguage_写入并拒绝非法取值(t *testing.T) {
 	}
 }
 
+// TestConfigGetLanguage_报告生效语言而非文件原文 覆盖手工写入非法取值后的展示一致性。
+//
+// 回归背景：偏好文件可以被用户手改，非法值在启动时会被静默降级为默认语言，
+// 而 config get 若原样回显那个值，用户看到的就与界面实际表现相反
+// （实测：文件写 "xx"，帮助文本是英文，命令却打印 xx）。
+func TestConfigGetLanguage_报告生效语言而非文件原文(t *testing.T) {
+	home := isolatedHome(t)
+	writePreferences(t, home, "language = \"xx\"\n")
+
+	out, err := run(t, "config", "get", "language")
+	if err != nil {
+		t.Fatalf("config get language 不应因为文件非法而报错: %v\n输出:\n%s", err, out)
+	}
+	if got := strings.TrimSpace(out); got != "en" {
+		t.Fatalf("非法取值应报告生效的默认语言 en，实际 %q", got)
+	}
+}
+
 // TestConfig_偏好与别名互不覆盖 覆盖两个配置文件分开存放这条设计约束。
 //
 // 这条用例守住的是最容易被「顺手合并」破坏的一点：alias.toml 的 Save 是整份重建，

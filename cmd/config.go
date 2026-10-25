@@ -56,10 +56,13 @@ func newConfigGetCmd() *cobra.Command {
 				}))
 			}
 
-			// 读不出来时按默认语言报告：启动路径本来就会静默降级到默认语言，
-			// 因此「当前生效的语言」在最坏情况下确实是默认值，这里报默认值不算失真
+			// 报告的必须是「生效的语言」而不是文件里的原文：配置文件可以被手工改成
+			// 任意内容，非法值在启动时会被静默降级为默认语言（见 chooseLanguage）。
+			// 若这里原样回显那个非法值，用户看到的就与界面实际表现相反——
+			// 实测遇到过：文件写 "xx"，帮助文本是英文，本命令却打印 xx。
+			// 因此降级规则要与启动路径一致：读不出来、为空、不受支持，一律报默认语言
 			lang, err := config.LoadLanguage()
-			if err != nil || lang == "" {
+			if err != nil || lang == "" || !l10n.IsSupported(lang, locales.Supported()) {
 				lang = locales.Default
 			}
 			// 走 cobra 的输出目标而不是直接写 os.Stdout：脚本取用时仍落到 stdout，
